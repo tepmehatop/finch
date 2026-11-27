@@ -1,0 +1,15 @@
+{
+  "place": "none",
+  "title": "MCP servers",
+  "palette": [
+    {
+      "title": "MCP servers",
+      "command": "tab.new",
+      "args": {
+        "mod": "mcp",
+        "name": "MCP"
+      },
+      "words": "mcp servers tools"
+    }
+  ]
+}

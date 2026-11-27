@@ -1,0 +1,15 @@
+{
+  "place": "none",
+  "title": "Fan-out",
+  "palette": [
+    {
+      "title": "Fan-out: one task to several agents",
+      "command": "tab.new",
+      "args": {
+        "mod": "fanout",
+        "name": "Fan-out"
+      },
+      "words": "fanout parallel agents worktree compare"
+    }
+  ]
+}

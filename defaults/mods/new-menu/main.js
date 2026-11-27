@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, spaces, panes, knownAgents, run, openOverlay, closeOverlay, props, window, keys, shared, setShared, readTextFile, home } from "finch";
+import { theme, spaces, panes, knownAgents, run, openOverlay, closeOverlay, props, window, keys, shared, setShared, readTextFile, home, agents, notify } from "finch";
 
 // Finch: programs the chat mod can read (mods/chat/main.js).
 const CHAT = new Set(["claude", "gigacode", "qwen"]);
@@ -77,7 +77,17 @@ export default class NewMenu extends View {
     const withChat = shared("finch.chatWithAgents") !== false;
     const model = key => shared(`finch.model.${key}`) ?? null;
     const argvOf = agent => (model(agent.key) && MODEL_FLAG[agent.key] ? [...agent.run, MODEL_FLAG[agent.key], model(agent.key)] : agent.run);
-    const startAgent = agent => run("tab.new", { space: space?.id, argv: argvOf(agent), ...(withChat && CHAT.has(agent.key) ? { chat: true } : {}) });
+    const startAgent = agent => {
+      const args = { space: space?.id, argv: argvOf(agent), ...(withChat && CHAT.has(agent.key) ? { chat: true } : {}) };
+      // Finch: over the concurrency limit (Settings > Mods), the agent waits its turn.
+      const limit = Number(shared("finch.limit") ?? 0);
+      if (limit > 0 && agents().filter(a => a.status === "working").length >= limit) {
+        setShared("finch.queue", [...(shared("finch.queue") ?? []), { name: agent.name, args }]);
+        notify({ title: `${agent.name} is queued`, body: `${limit} agents are working; it starts when one finishes.`, level: "info" });
+        return;
+      }
+      run("tab.new", args);
+    };
     // Finch: a chip on an agent's row cycles through its models (none = the agent's default).
     const modelChip = agent => {
       const list = (this.models ?? FIXED_MODELS)[agent.key] ?? [];
@@ -92,7 +102,7 @@ export default class NewMenu extends View {
     };
     const installed = this.agents.filter(a => a.installed);
     const choices = this.failed ? installed : [...installed, ...this.agents.filter(a => !a.installed).slice(0, 2)];
-    return v_flex().min_h(0).w_full().h(Math.min(520, 196 + Math.max(1, choices.length + (this.failed ? 1 : 0)) * 31)).bg(t.popover).p(5).text_size(12.8)
+    return v_flex().min_h(0).w_full().h(Math.min(552, 227 + Math.max(1, choices.length + (this.failed ? 1 : 0)) * 31)).bg(t.popover).p(5).text_size(12.8)
       .id("new-menu").track_focus(this.handle)
       .on_key_down((e) => {
         if (e.modifiers.control || e.modifiers.platform || e.modifiers.alt) return;
@@ -113,6 +123,7 @@ export default class NewMenu extends View {
           .flex().items_center().justify_center().text_size(10).text_color(t.accent_foreground).child(withChat ? "✓" : ""))
         .child(div().flex_1().text_size(12).text_color(t.muted).child("Open the chat with the agent")))
       .child(div().h(1).mx(4).my(5).bg(t.border))
+      .child(this.row("fanout", div().w(14).child("⑂"), "Several agents…", () => run("tab.new", { space: space?.id, mod: "fanout", name: "Fan-out" }), "", Boolean(space)))
       .child(this.row("space", div().w(14).child("+"), "New space", () => run("space.new"), shortcut("space.new")))
       .child(this.row("worktree", svg("mods/workspace-chrome/branch.svg").size(14), "New worktree…", () => openOverlay({ mod: "worktree", kind: "dialog", width: 460, height: 280, props: { space: space?.id, folder: panes().find(p => p.focused)?.cwd, action: "new" } }), "", Boolean(space)))
       .child(this.row("worktree-open", svg("mods/workspace-chrome/branch.svg").size(14), "Open worktree\u2026", () => openOverlay({ mod: "worktree", kind: "dialog", width: 560, height: 480, props: { space: space?.id, folder: panes().find(p => p.focused)?.cwd, action: "open" } }), "", Boolean(space)));

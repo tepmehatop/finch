@@ -26,9 +26,13 @@ const EXTRAS = [
   { id: "better-files", title: "Better Files", about: "File browser in place of Files: filter any file, rendered Markdown, Git marks, hand a file to an agent.", on: true },
   { id: "git-graph", title: "Git graph", about: "Commit graph with branches and tags; checkout and Git actions from it. A button in the tab bar.", on: true },
   { id: "asks", title: "Agent questions", about: "Every question your agents ask, in one panel; answer from there. A button in the tab bar.", on: true },
+  { id: "review", title: "Review", about: "The space's changes, line by line: note what should change and send the notes to an agent.", on: true },
+  { id: "mcp", title: "MCP servers", about: "MCP servers set up once and written into each agent's config: GigaCode, Qwen Code, Claude Code, Codex.", on: true },
+  { id: "jira", title: "Jira", about: "Issues from Jira Server, Data Center or Cloud by a JQL query; one goes to an agent on a new branch.", on: true },
   { id: "prompts", title: "Prompts", about: "Saved prompts to send to an agent or put in the chat, and instructions written into every agent's global instructions file.", on: true },
   { id: "skillsgate", title: "Skills", about: "Agents' skills: what's installed for each tool, turn one on or off.", on: true },
   { id: "space-folders", title: "Space folders", about: "Folders in the spaces list: drag spaces into colored folders.", on: false, select: ["spaces-stack", "space-folders", "spaces"] },
+  { id: "retry", title: "Auto-retry", about: "When an agent stops on a provider error, send it \"continue\" a minute later (up to 3 times); after a usage limit, at its reset time.", on: true },
   { id: "better-alerts", title: "System notifications", about: "A macOS or Linux notification when an agent needs you or finishes.", on: true },
   { id: "better-search", title: "Search everything", about: "One search for tabs, agents, spaces, files, commands and agent output.", on: true, open: "better-search", key: "⌥⌘P" },
   { id: "better-config", title: "Mod settings", about: "Every mod's own settings in one dialog.", on: true, open: "better-config", key: "⌥⌘," },
@@ -835,6 +839,10 @@ export default class Settings extends View {
           h_flex().gap(8).items_center().flex_none()
             .when(Boolean(x.open) && isOn(x), (el) => el.child(this.button(t, `st-open-${x.id}`, "Open", () => { closeOverlay(props()?.overlay); run("mod.open", { name: x.open }); })))
             .child(this.toggle(t, `st-mod-${x.id}`, isOn(x), flip(x))))))
+      .child(this.row(t, "Agents at once", "The most agents working at the same time; more started from the + menu wait in a queue. 0: no limit.",
+        this.stepper(t, "st-limit", String(Number(shared("finch.limit") ?? 0)),
+          (_e, cx) => { setShared("finch.limit", Math.max(0, Number(shared("finch.limit") ?? 0) - 1)); cx.notify(); },
+          (_e, cx) => { setShared("finch.limit", Math.min(20, Number(shared("finch.limit") ?? 0) + 1)); cx.notify(); })))
       .child(div().h(18))
       .child(this.heading(t, "Layouts"))
       .children(EXTRA_LAYOUTS.map((l) =>

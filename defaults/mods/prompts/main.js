@@ -9,7 +9,7 @@
 
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Scrollbar } from "gpui-base";
-import { theme, appHome, home, readTextFile, writeTextFile, focused, hc, exec, setShared, notify, checking } from "finch";
+import { theme, appHome, home, readTextFile, writeTextFile, focused, hc, exec, setShared, notify, checking, tr } from "finch";
 
 const START = "<!-- finch:instructions -->";
 const END = "<!-- /finch:instructions -->";
@@ -32,6 +32,27 @@ function withBlock(text, block) {
   return text ? `${text.replace(/\s*$/, "")}\n\n${body}\n` : `${body}\n`;
 }
 
+// Finch: what an empty library starts with (B2: a lead agent with workers).
+const STARTERS = [
+  {
+    id: "starter-orchestrate",
+    title: "Оркестрация: раздели задачу на воркеров",
+    text: [
+      "Ты ведущий агент. Раздели задачу ниже на 2–4 независимые части и поручи каждую отдельному агенту-воркеру:",
+      "1. Запусти воркера: hc run --bg --name <имя> --cwd <папка> <агент> \"<поручение>. Отчитайся через hc send $HC_TERMINAL_ID, когда закончишь или застрянешь.\"",
+      "   Для параллельной работы в одном репозитории дай каждому свой git worktree (git worktree add -b <ветка> <папка>).",
+      "2. Жди воркеров командой hc wait <имя> (не sleep), читай их вывод через hc read <имя> --lines 80.",
+      "3. Если воркер ждёт ответа, ответь ему: hc send <имя> \"...\".",
+      "4. Собери результаты, проверь их (тесты, сборка) и дай мне сводку: что сделано, что осталось, где ветки.",
+      "",
+      "Задача:",
+    ].join("\n"),
+    starred: true,
+  },
+  { id: "starter-review", title: "Ревью кода", text: "Сделай ревью незакоммиченных изменений (git diff HEAD): ошибки, граничные случаи, безопасность, читаемость. Для каждого замечания укажи файл и строку и предложи исправление. Ничего не меняй, пока я не скажу." },
+  { id: "starter-tests", title: "Напиши тесты", text: "Напиши тесты для изменённого кода: обычные случаи, граничные и ошибки. Запусти их и почини то, что падает. В конце покажи, какие тесты добавлены и что они проверяют." },
+];
+
 export default class Prompts extends View {
   init(_props, cx) {
     this.tab = "prompts";
@@ -39,11 +60,11 @@ export default class Prompts extends View {
     this.raw = null;
     this.editing = null; // { id?, title, text } while the form is open
     this.status = {};
-    this.search = InputState.new({ placeholder: "Search prompts" });
+    this.search = InputState.new({ placeholder: tr("Search prompts") });
     this.search.on("change", (_e, cx) => cx.notify());
-    this.title = InputState.new({ placeholder: "Title" });
-    this.body = TextareaState.new({ placeholder: "Prompt text", rows: 6 });
-    this.instructions = TextareaState.new({ placeholder: "Rules every agent follows on this computer: language, code style, what never to do…", rows: 10 });
+    this.title = InputState.new({ placeholder: tr("Title") });
+    this.body = TextareaState.new({ placeholder: tr("Prompt text"), rows: 6 });
+    this.instructions = TextareaState.new({ placeholder: tr("Rules every agent follows on this computer: language, code style, what never to do…"), rows: 10 });
     if (checking()) return;
     cx.spawn(async (cx) => {
       await this.load();
@@ -61,6 +82,7 @@ export default class Prompts extends View {
     try {
       const d = JSON.parse(this.raw ?? "{}");
       this.data = { prompts: Array.isArray(d.prompts) ? d.prompts : [], instructions: d.instructions ?? "" };
+      if (this.raw == null) this.data.prompts = STARTERS.map((p) => ({ ...p }));
     } catch {
       this.data = { prompts: [], instructions: "" };
     }

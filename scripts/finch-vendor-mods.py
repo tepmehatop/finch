@@ -103,6 +103,33 @@ def strip_network_panels(layout_path: pathlib.Path, mods: set[str]):
         return n
 
     node = walk(node)
+    # Finch: background mods (auto-retry and the agent queue) run in every shipped layout.
+    if not any((f.get("content") or {}).get("mod") == "retry" for f in node.get("floating", [])):
+        node.setdefault("floating", []).append({"id": "retry", "content": {"mod": "retry"}, "edge": "bottom", "align": "end"})
+    # Finch: Finch's panels join the layout's side panel.
+    FINCH_PANEL_IDS = ["review", "asks", "git-graph", "skillsgate", "mcp", "jira", "prompts"]
+    def find_id(n, i):
+        if n.get("id") == i:
+            return n
+        for c in n.get("children", []):
+            r = find_id(c, i)
+            if r:
+                return r
+    body = find_id(node, "panel-body")
+    if body is not None:
+        have = {c.get("id") for c in body.get("children", [])}
+        body["children"] += [{"id": i, "type": "block", "content": {"mod": i}} for i in FINCH_PANEL_IDS if i not in have]
+    tabs = find_id(node, "tabs")
+    props = ((tabs or {}).get("content") or {}).get("props") or {}
+    if isinstance(props.get("buttons"), list):
+        icons = {"review": "mods/changes/changes.svg", "asks": "frame/welcome/messages.svg", "git-graph": "mods/workspace-chrome/branch.svg",
+                 "skillsgate": "frame/welcome/layers.svg", "mcp": "frame/welcome/layers.svg", "jira": "mods/workspace-chrome/branch.svg", "prompts": "frame/palette/command.svg"}
+        labels = {"review": "Review", "asks": "Questions", "git-graph": "Git graph", "skillsgate": "Skills", "mcp": "MCP", "jira": "Jira", "prompts": "Prompts"}
+        targets = {c.get("id") for c in body.get("children", [])} if body else set()
+        props["buttons"] = [b for b in props["buttons"] if ((b.get("action") or {}).get("target") in targets) or (b.get("action") or {}).get("type") != "panel"]
+        have = {b.get("id") for b in props["buttons"]}
+        props["buttons"] += [{"id": i, "label": labels[i], "icon": icons[i], "group": "panels",
+                              "action": {"type": "panel", "container": "panel", "stack": "panel-body", "target": i}} for i in FINCH_PANEL_IDS if i not in have]
     # Finch: PA layouts start in Finch's palette; their own themes stay in Settings > Look.
     if layout_path.name in ("PA-Advanced.json", "PA-Light.json"):
         node["theme"] = {"light": "paper", "dark": "graphite"}
@@ -149,6 +176,13 @@ PATCHES = {
     ],
     "prodsovet/filesystem.js": [
         ('  if (place === "tab") run("tab.new", { ...(w.space ? { space: w.space } : {}), ...(w.cwd ? { folder: w.cwd } : {}), ...(argv ? { argv } : {}), ...(name ? { name } : {}) });', '  // Finch: agents the chat reads open with their chat beside them (the + menu\'s switch).\n  const chat = Boolean(argv) && shared("finch.chatWithAgents") !== false && /(^|\\/)(claude|gigacode|qwen)$/.test(argv[0] ?? "");\n  if (place === "tab") run("tab.new", { ...(w.space ? { space: w.space } : {}), ...(w.cwd ? { folder: w.cwd } : {}), ...(argv ? { argv } : {}), ...(name ? { name } : {}), ...(chat ? { chat: true } : {}) });'),
+    ],
+    "prodsovet/file-tabs.js": [
+        ('      .when(enabled.includes("issues"), el => el.child(panelButton("issues", L("Issues", "Задачи"), "mods/prodsovet/art/px/issue.svg")))', '      .when(enabled.includes("issues"), el => el.child(panelButton("issues", L("Issues", "Задачи"), "mods/prodsovet/art/px/issue.svg")))\n      // Finch: Finch\'s panels (review, MCP, Jira, prompts...) behind More; the one shown keeps its button.\n      .when(FINCH_PANELS.some(([id]) => finchPanel(id)), el => {\n        const shownId = panel && !panel.hidden ? body?.active : null;\n        const current = FINCH_PANELS.find(([id]) => id === shownId && finchPanel(id));\n        const list = FINCH_PANELS.filter(([id]) => finchPanel(id));\n        return el.when(Boolean(current), e => e.child(panelButton(current[0], L(current[1], current[3]), current[2])))\n          .child(h_flex().id("panel-more").h(metric("tabs.button")).px(8).gap(4).flex_none().items_center().rounded(radius(6))\n            .text_size(fontSize("tabs.action")).text_color(t.muted).hover(s => s.bg(t.hover)).on_mouse_down("left", stop)\n            .on_click(() => openOverlay({ mod: "panels-menu", kind: "popup", width: 220, height: 40 + 31 * list.length, props: { panels: list.map(([id, en, icon]) => [id, en, icon]) } }))\n            .child(L("More", "Ещё")).child(div().text_size(10).child("▾")));\n      })'),
+        ("function find(node, id) {", '// Finch: its own panels, added to this layout\'s side panel: [id, English, icon, Russian].\nconst FINCH_PANELS = [\n  ["review", "Review", "mods/changes/changes.svg", "Ревью"],\n  ["asks", "Questions", "frame/welcome/messages.svg", "Вопросы"],\n  ["git-graph", "Git graph", "mods/workspace-chrome/branch.svg", "Граф Git"],\n  ["skillsgate", "Skills", "frame/welcome/layers.svg", "Навыки"],\n  ["mcp", "MCP", "frame/welcome/layers.svg", "MCP"],\n  ["jira", "Jira", "mods/workspace-chrome/branch.svg", "Jira"],\n  ["prompts", "Prompts", "frame/palette/command.svg", "Промпты"],\n];\nconst finchPanel = (id) => (shared("finch.mods") ?? {})[id] !== false && Boolean(find(layout(), id));\n\nfunction find(node, id) {'),
+    ],
+    "better-tabs/main.js": [
+        ('  config() {\n    return { ...DEFAULTS, ...props() };\n  }', '  config() {\n    // Finch: buttons of shipped mods turned off in Settings > Mods are left out.\n    const off = shared("finch.mods") ?? {};\n    const c = { ...DEFAULTS, ...props() };\n    return { ...c, buttons: (c.buttons ?? []).filter((b) => off[b.id] !== false) };\n  }'),
     ],
     "prodsovet/main.js": [
         ('      .when(this.hovered, (el) => el\n        .child(this.button(t, `ps-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }))', '      // Finch: agents whose conversation the chat mod reads get a Chat toggle.\n      .when(["claude", "gigacode", "qwen"].includes(p.program?.key) && Boolean(p.terminal), (el) => el.child(div().id(`ps-chat-${pane}`).flex_none().px(7).h(20).flex().items_center().rounded(5)\n        .border_1().border_color(t.border).text_size(11.5).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground))\n        .on_click((_e, cx) => { cx.stop_propagation(); run("agent.chat", { terminal: p.terminal }); })\n        .child("Chat")))\n      .when(this.hovered, (el) => el\n        .child(this.button(t, `ps-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }))'),

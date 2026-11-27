@@ -101,27 +101,87 @@
                       }
                     },
                     {
-                      "id": "prs",
-                      "label": "PRs",
-                      "icon": "mods/branch-pr/icons/pull-request.svg",
+                      "id": "review",
+                      "label": "Review",
+                      "icon": "mods/changes/changes.svg",
                       "group": "panels",
                       "action": {
                         "type": "panel",
                         "container": "panel",
                         "stack": "panel-body",
-                        "target": "pull-requests"
+                        "target": "review"
                       }
                     },
                     {
-                      "id": "issues",
-                      "label": "Issues",
-                      "icon": "mods/branch-issue/icons/issue.svg",
+                      "id": "asks",
+                      "label": "Questions",
+                      "icon": "frame/welcome/messages.svg",
                       "group": "panels",
                       "action": {
                         "type": "panel",
                         "container": "panel",
                         "stack": "panel-body",
-                        "target": "linear-issues"
+                        "target": "asks"
+                      }
+                    },
+                    {
+                      "id": "git-graph",
+                      "label": "Git graph",
+                      "icon": "mods/workspace-chrome/branch.svg",
+                      "group": "panels",
+                      "action": {
+                        "type": "panel",
+                        "container": "panel",
+                        "stack": "panel-body",
+                        "target": "git-graph"
+                      }
+                    },
+                    {
+                      "id": "skillsgate",
+                      "label": "Skills",
+                      "icon": "frame/welcome/layers.svg",
+                      "group": "panels",
+                      "action": {
+                        "type": "panel",
+                        "container": "panel",
+                        "stack": "panel-body",
+                        "target": "skillsgate"
+                      }
+                    },
+                    {
+                      "id": "mcp",
+                      "label": "MCP",
+                      "icon": "frame/welcome/layers.svg",
+                      "group": "panels",
+                      "action": {
+                        "type": "panel",
+                        "container": "panel",
+                        "stack": "panel-body",
+                        "target": "mcp"
+                      }
+                    },
+                    {
+                      "id": "jira",
+                      "label": "Jira",
+                      "icon": "mods/workspace-chrome/branch.svg",
+                      "group": "panels",
+                      "action": {
+                        "type": "panel",
+                        "container": "panel",
+                        "stack": "panel-body",
+                        "target": "jira"
+                      }
+                    },
+                    {
+                      "id": "prompts",
+                      "label": "Prompts",
+                      "icon": "frame/palette/command.svg",
+                      "group": "panels",
+                      "action": {
+                        "type": "panel",
+                        "container": "panel",
+                        "stack": "panel-body",
+                        "target": "prompts"
                       }
                     }
                   ]
@@ -201,6 +261,55 @@
                       "content": {
                         "mod": "better-changes"
                       }
+                    },
+                    {
+                      "id": "review",
+                      "type": "block",
+                      "content": {
+                        "mod": "review"
+                      }
+                    },
+                    {
+                      "id": "asks",
+                      "type": "block",
+                      "content": {
+                        "mod": "asks"
+                      }
+                    },
+                    {
+                      "id": "git-graph",
+                      "type": "block",
+                      "content": {
+                        "mod": "git-graph"
+                      }
+                    },
+                    {
+                      "id": "skillsgate",
+                      "type": "block",
+                      "content": {
+                        "mod": "skillsgate"
+                      }
+                    },
+                    {
+                      "id": "mcp",
+                      "type": "block",
+                      "content": {
+                        "mod": "mcp"
+                      }
+                    },
+                    {
+                      "id": "jira",
+                      "type": "block",
+                      "content": {
+                        "mod": "jira"
+                      }
+                    },
+                    {
+                      "id": "prompts",
+                      "type": "block",
+                      "content": {
+                        "mod": "prompts"
+                      }
                     }
                   ],
                   "active": "changes"
@@ -243,5 +352,15 @@
   "traffic_lights": [
     12,
     16
+  ],
+  "floating": [
+    {
+      "id": "retry",
+      "content": {
+        "mod": "retry"
+      },
+      "edge": "bottom",
+      "align": "end"
+    }
   ]
 }

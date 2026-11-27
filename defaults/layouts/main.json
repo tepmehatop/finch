@@ -216,6 +216,27 @@
                       "content": {
                         "mod": "prompts"
                       }
+                    },
+                    {
+                      "id": "review",
+                      "type": "block",
+                      "content": {
+                        "mod": "review"
+                      }
+                    },
+                    {
+                      "id": "mcp",
+                      "type": "block",
+                      "content": {
+                        "mod": "mcp"
+                      }
+                    },
+                    {
+                      "id": "jira",
+                      "type": "block",
+                      "content": {
+                        "mod": "jira"
+                      }
                     }
                   ]
                 }
@@ -241,6 +262,14 @@
       "id": "better-alerts",
       "content": {
         "mod": "better-alerts"
+      },
+      "edge": "bottom",
+      "align": "end"
+    },
+    {
+      "id": "retry",
+      "content": {
+        "mod": "retry"
       },
       "edge": "bottom",
       "align": "end"

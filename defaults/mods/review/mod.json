@@ -1,0 +1,15 @@
+{
+  "place": "none",
+  "title": "Review",
+  "palette": [
+    {
+      "title": "Review changes",
+      "command": "tab.new",
+      "args": {
+        "mod": "review",
+        "name": "Review"
+      },
+      "words": "review diff notes agent \u0440\u0435\u0432\u044c\u044e"
+    }
+  ]
+}

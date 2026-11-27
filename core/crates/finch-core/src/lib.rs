@@ -1,4 +1,6 @@
 pub mod addr;
+/// Finch: kept terminals bring their coding agent back.
+pub mod agent_resume;
 pub mod api;
 pub mod attach;
 pub mod cli;

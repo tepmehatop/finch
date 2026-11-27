@@ -152,6 +152,55 @@
                           "role": "changes"
                         }
                       }
+                    },
+                    {
+                      "id": "review",
+                      "type": "block",
+                      "content": {
+                        "mod": "review"
+                      }
+                    },
+                    {
+                      "id": "asks",
+                      "type": "block",
+                      "content": {
+                        "mod": "asks"
+                      }
+                    },
+                    {
+                      "id": "git-graph",
+                      "type": "block",
+                      "content": {
+                        "mod": "git-graph"
+                      }
+                    },
+                    {
+                      "id": "skillsgate",
+                      "type": "block",
+                      "content": {
+                        "mod": "skillsgate"
+                      }
+                    },
+                    {
+                      "id": "mcp",
+                      "type": "block",
+                      "content": {
+                        "mod": "mcp"
+                      }
+                    },
+                    {
+                      "id": "jira",
+                      "type": "block",
+                      "content": {
+                        "mod": "jira"
+                      }
+                    },
+                    {
+                      "id": "prompts",
+                      "type": "block",
+                      "content": {
+                        "mod": "prompts"
+                      }
                     }
                   ],
                   "active": "files"
@@ -207,5 +256,15 @@
   "preview": "layouts/pa-light.png",
   "ui_font": "Geist",
   "font": "JetBrains Mono",
-  "font_size": 14
+  "font_size": 14,
+  "floating": [
+    {
+      "id": "retry",
+      "content": {
+        "mod": "retry"
+      },
+      "edge": "bottom",
+      "align": "end"
+    }
+  ]
 }

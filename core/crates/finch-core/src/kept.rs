@@ -107,7 +107,11 @@ impl Core {
                 .and_then(|old| old.prepare(&self.paths.state, id, &shell, &cwd));
             let (launch, argv, cwd) = match attempt {
                 Some((file, argv, cwd)) => (Some(file), argv, cwd),
-                None => (None, shell.clone(), cwd),
+                // Finch: an agent that was running comes back with its latest session.
+                None => {
+                    let argv = crate::agent_resume::argv(t.foreground.as_ref(), &shell).unwrap_or_else(|| shell.clone());
+                    (None, argv, cwd)
+                }
             };
             let resuming = launch.is_some();
             let (env, scope) = crate::api::terminal_env(&self, id, &cwd, env, resume.as_ref());

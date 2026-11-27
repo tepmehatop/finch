@@ -464,7 +464,67 @@
     "Apply to agents": "Применить к агентам",
     "up to date": "актуально",
     "written": "записано",
-    "Saved prompts to send to an agent or put in the chat, and instructions written into every agent's global instructions file.": "Сохранённые промпты для отправки агенту или в чат и инструкции, которые записываются в глобальный файл инструкций каждого агента."
+    "Saved prompts to send to an agent or put in the chat, and instructions written into every agent's global instructions file.": "Сохранённые промпты для отправки агенту или в чат и инструкции, которые записываются в глобальный файл инструкций каждого агента.",
+    "Review": "Ревью",
+    "Review changes": "Ревью изменений",
+    "What should change here?": "Что здесь нужно изменить?",
+    "Add note": "Добавить замечание",
+    "No notes yet": "Замечаний пока нет",
+    "Clear": "Очистить",
+    "No agent in this space": "В этом пространстве нет агента",
+    "Start an agent here, then send the notes.": "Запустите здесь агента и отправьте замечания снова.",
+    "Notes sent": "Замечания отправлены",
+    "Not sent": "Не отправлено",
+    "The space's changes, line by line: note what should change and send the notes to an agent.": "Изменения пространства построчно: отметьте, что поправить, и отправьте замечания агенту.",
+    "MCP servers": "MCP-серверы",
+    "Import": "Импорт",
+    "Name (letters, digits, -)": "Имя (буквы, цифры, -)",
+    "Command, e.g. npx -y @modelcontextprotocol/server-filesystem ~/work": "Команда, например npx -y @modelcontextprotocol/server-filesystem ~/work",
+    "…or a URL for an HTTP server": "…или адрес HTTP-сервера",
+    "Environment, one KEY=value per line": "Переменные окружения, по одной КЛЮЧ=значение в строке",
+    "A name and a command or URL are needed": "Нужны имя и команда или адрес",
+    "Nothing new to import": "Нечего импортировать",
+    "No servers yet. New adds one; Import brings in the ones your agents already have.": "Серверов пока нет. «Новый» добавит сервер, «Импорт» подтянет уже настроенные у агентов.",
+    "FOUND IN YOUR AGENTS": "НАЙДЕНО У АГЕНТОВ",
+    "Agents load new servers when they start again.": "Агенты подхватят серверы при следующем запуске.",
+    "MCP servers set up once and written into each agent's config: GigaCode, Qwen Code, Claude Code, Codex.": "MCP-серверы настраиваются один раз и записываются в конфиги агентов: GigaCode, Qwen Code, Claude Code, Codex.",
+    "Auto-retry": "Автоповтор",
+    "Agents at once": "Агентов одновременно",
+    "When an agent stops on a provider error, send it \"continue\" a minute later (up to 3 times); after a usage limit, at its reset time.": "Если агент остановился из-за ошибки провайдера, через минуту отправить ему «продолжай» (до 3 раз); при исчерпании лимита — во время сброса.",
+    "The most agents working at the same time; more started from the + menu wait in a queue. 0: no limit.": "Сколько агентов могут работать одновременно; остальные из меню «+» ждут в очереди. 0 — без лимита.",
+    "Auto-retry stopped after 3 tries. Check the agent.": "Автоповтор остановлен после 3 попыток. Проверьте агента.",
+    "What changed": "Что изменилось",
+    "Fan-out": "Fan-out",
+    "Fan-out: one task to several agents": "Fan-out: одна задача нескольким агентам",
+    "Several agents…": "Несколько агентов…",
+    "The task every agent gets": "Задача, которую получит каждый агент",
+    "Start": "Запустить",
+    "Starting…": "Запуск…",
+    "One task to several agents, each on its own branch and worktree. Click an agent to add it (again for a second copy).": "Одна задача нескольким агентам, каждому своя ветка и worktree. Нажмите на агента, чтобы добавить его (ещё раз — вторую копию).",
+    "Write a task and pick at least one agent": "Напишите задачу и выберите хотя бы одного агента",
+    "Open a space in a git repository first": "Сначала откройте пространство в git-репозитории",
+    "Fan-out failed": "Fan-out не удался",
+    "Merge": "Слить",
+    "Merge failed": "Слить не удалось",
+    "Remove for good?": "Удалить насовсем?",
+    "no changes": "без изменений",
+    "Jira issues": "Задачи Jira",
+    "Jira address": "Адрес Jira",
+    "Token": "Токен",
+    "User": "Пользователь",
+    "User (only for a password)": "Пользователь (только для пароля)",
+    "Personal access token (or password)": "Personal access token (или пароль)",
+    "Don't check the certificate (self-signed)": "Не проверять сертификат (самоподписанный)",
+    "Saved in ~/.config/finch/jira.json, the token included.": "Хранится в ~/.config/finch/jira.json вместе с токеном.",
+    "Refresh": "Обновить",
+    "TO WORK, ON A NEW BRANCH, WITH": "В РАБОТУ, В НОВОЙ ВЕТКЕ, С АГЕНТОМ",
+    "Send to the focused agent": "Отправить текущему агенту",
+    "No issues for this query": "По этому запросу задач нет",
+    "Open a space in the issue's repository first": "Сначала откройте пространство в репозитории задачи",
+    "Couldn't start": "Не удалось запустить",
+    "Issues from Jira Server, Data Center or Cloud by a JQL query; one goes to an agent on a new branch.": "Задачи из Jira Server, Data Center или Cloud по JQL-запросу; задача уходит агенту в новой ветке.",
+    "More": "Ещё",
+    "Panels": "Панели"
   },
   "patterns": [
     [
@@ -722,6 +782,82 @@
     [
       "not written: (.+)",
       "не записано: $1"
+    ],
+    [
+      "(\\d+) notes",
+      "Замечаний: $1"
+    ],
+    [
+      "To: (.+)",
+      "Кому: $1"
+    ],
+    [
+      "(\\d+) servers",
+      "серверов: $1"
+    ],
+    [
+      "can't read (.+): (.+)",
+      "не удалось прочитать $1: $2"
+    ],
+    [
+      "(.+): still failing",
+      "$1: ошибка повторяется"
+    ],
+    [
+      "(.+): limit reached",
+      "$1: лимит исчерпан"
+    ],
+    [
+      "(.+): provider error",
+      "$1: ошибка провайдера"
+    ],
+    [
+      "Auto-retry at (.+)\\.",
+      "Автоповтор в $1."
+    ],
+    [
+      "Started from the queue: (.+)",
+      "Запущен из очереди: $1"
+    ],
+    [
+      "(.+) is queued",
+      "$1 в очереди"
+    ],
+    [
+      "(\\d+) agents are working; it starts when one finishes\\.",
+      "Работают $1 агентов; запустится, когда один закончит."
+    ],
+    [
+      "Updated to (.+)",
+      "Обновлено до $1"
+    ],
+    [
+      "Merge into (.+)\\?",
+      "Слить в $1?"
+    ],
+    [
+      "Merged (.+) into (.+)",
+      "$1 слита в $2"
+    ],
+    [
+      "(\\d+) files? changed(.*)",
+      "изменено файлов: $1$2"
+    ],
+    [
+      "Jira refused the credentials \\(HTTP (\\d+)\\)",
+      "Jira отклонила учётные данные (HTTP $1)"
+    ],
+    [
+      "Jira answered HTTP (\\d+)",
+      "Jira ответила HTTP $1"
+    ],
+    [
+      "(.+) is with (.+)",
+      "$1 передана: $2"
+    ],
+    [
+      "Branch (.+)",
+      "Ветка $1"
     ]
   ]
 }

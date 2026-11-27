@@ -9,6 +9,18 @@ import { View, div, svg, image } from "gpui-kit";
 import { h_flex, ScrollHandle } from "gpui-base";
 import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings, terminals } from "finch";
 
+// Finch: its own panels, added to this layout's side panel: [id, English, icon, Russian].
+const FINCH_PANELS = [
+  ["review", "Review", "mods/changes/changes.svg", "Ревью"],
+  ["asks", "Questions", "frame/welcome/messages.svg", "Вопросы"],
+  ["git-graph", "Git graph", "mods/workspace-chrome/branch.svg", "Граф Git"],
+  ["skillsgate", "Skills", "frame/welcome/layers.svg", "Навыки"],
+  ["mcp", "MCP", "frame/welcome/layers.svg", "MCP"],
+  ["jira", "Jira", "mods/workspace-chrome/branch.svg", "Jira"],
+  ["prompts", "Prompts", "frame/palette/command.svg", "Промпты"],
+];
+const finchPanel = (id) => (shared("finch.mods") ?? {})[id] !== false && Boolean(find(layout(), id));
+
 function find(node, id) {
   if (node?.id === id) return node;
   for (const child of node?.children ?? []) {
@@ -152,6 +164,17 @@ export default class Tabs extends View {
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", L("Changes", "Изменения"), icon("changes", "mods/changes/changes.svg"))))
       .when(enabled.includes("github"), el => el.child(panelButton("github", "GitHub", icon("pr", "mods/workspace-chrome/branch.svg"))))
       .when(enabled.includes("issues"), el => el.child(panelButton("issues", L("Issues", "Задачи"), "mods/prodsovet/art/px/issue.svg")))
+      // Finch: Finch's panels (review, MCP, Jira, prompts...) behind More; the one shown keeps its button.
+      .when(FINCH_PANELS.some(([id]) => finchPanel(id)), el => {
+        const shownId = panel && !panel.hidden ? body?.active : null;
+        const current = FINCH_PANELS.find(([id]) => id === shownId && finchPanel(id));
+        const list = FINCH_PANELS.filter(([id]) => finchPanel(id));
+        return el.when(Boolean(current), e => e.child(panelButton(current[0], L(current[1], current[3]), current[2])))
+          .child(h_flex().id("panel-more").h(metric("tabs.button")).px(8).gap(4).flex_none().items_center().rounded(radius(6))
+            .text_size(fontSize("tabs.action")).text_color(t.muted).hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
+            .on_click(() => openOverlay({ mod: "panels-menu", kind: "popup", width: 220, height: 40 + 31 * list.length, props: { panels: list.map(([id, en, icon]) => [id, en, icon]) } }))
+            .child(L("More", "Ещё")).child(div().text_size(10).child("▾")));
+      })
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
         .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
         .child(button("close-window", w.platform === "windows" ? svg("mods/tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));

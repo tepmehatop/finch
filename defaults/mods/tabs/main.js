@@ -27,6 +27,16 @@ function label(tab, lead) {
   return (tab.name === prog || !tab.named) && telling ? live : base;
 }
 
+// Finch: shipped panels opened from the tab bar's More menu: [layout id, label, icon].
+const MORE = [
+  ["git-graph", "Git graph", "mods/workspace-chrome/branch.svg"],
+  ["asks", "Questions", "frame/welcome/messages.svg"],
+  ["skillsgate", "Skills", "frame/welcome/layers.svg"],
+  ["mcp", "MCP", "frame/welcome/layers.svg"],
+  ["jira", "Jira", "mods/workspace-chrome/branch.svg"],
+  ["prompts", "Prompts", "frame/palette/command.svg"],
+];
+
 export default class Tabs extends View {
   init() {
     this.pressed = null;
@@ -154,10 +164,17 @@ export default class Tabs extends View {
       // and the extra panels show only while their mod is on.
       .when(enabled.includes("files"), el => el.child(panelButton(extra("better-files") ? "better-files" : "files", "Files", "mods/files/file.svg")))
       .when(enabled.includes("changes"), el => el.child(panelButton(extra("better-changes") ? "better-changes" : "changes", "Changes", "mods/changes/changes.svg")))
-      .when(extra("git-graph"), el => el.child(panelButton("git-graph", "Git graph", "mods/workspace-chrome/branch.svg")))
-      .when(extra("asks"), el => el.child(panelButton("asks", "Questions", "frame/welcome/messages.svg")))
-      .when(extra("skillsgate"), el => el.child(panelButton("skillsgate", "Skills", "frame/welcome/layers.svg")))
-      .when(extra("prompts"), el => el.child(panelButton("prompts", "Prompts", "frame/palette/command.svg")))
+      .when(extra("review"), el => el.child(panelButton("review", "Review", "mods/changes/changes.svg")))
+      // Finch: the other shipped panels sit behind More (the one shown keeps its button).
+      .when(MORE.some(([id]) => extra(id)), el => {
+        const shownId = panel && !panel.hidden ? body?.active : null;
+        const current = MORE.find(([id]) => id === shownId && extra(id));
+        return el.when(Boolean(current), e => e.child(panelButton(current[0], current[1], current[2])))
+          .child(h_flex().id("panel-more").h(26).px(8).gap(4).flex_none().items_center().rounded(6).text_size(12).text_color(t.muted)
+            .hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
+            .on_click(() => openOverlay({ mod: "panels-menu", kind: "popup", width: 220, height: 40 + 31 * MORE.filter(([id]) => extra(id)).length, props: { panels: MORE.filter(([id]) => extra(id)) } }))
+            .child("More").child(div().text_size(10).child("▾")));
+      })
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
         .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
         .child(button("close-window", w.platform === "windows" ? svg("mods/tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));

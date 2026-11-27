@@ -46,7 +46,10 @@ class Tabs extends View {
   // ── Configuration, lifecycle, and command dispatch ────────────────────────
 
   config() {
-    return { ...DEFAULTS, ...props() };
+    // Finch: buttons of shipped mods turned off in Settings > Mods are left out.
+    const off = shared("finch.mods") ?? {};
+    const c = { ...DEFAULTS, ...props() };
+    return { ...c, buttons: (c.buttons ?? []).filter((b) => off[b.id] !== false) };
   }
 
   init(_props, cx) {

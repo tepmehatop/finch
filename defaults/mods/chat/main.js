@@ -94,9 +94,13 @@ export default class Chat extends View {
 
   attach() {
     const term = this.term();
+    if (!term) {
+      this.note = this.address ? "ended" : "no-terminal";
+      return;
+    }
     this.kind = kindOf(term);
     if (!this.kind) {
-      this.note = term ? "unsupported" : "no-terminal";
+      this.note = "unsupported";
       return;
     }
     const loc = locate(this.kind, term.cwd);
@@ -356,7 +360,7 @@ export default class Chat extends View {
       .when(Boolean(props()?.pane), (el) => el.child(this.button(t, "chat-close", "Close", () => run("pane.close", { pane: props().pane }))));
 
     let body;
-    if (ended && !this.blocks.length) body = this.empty(t, "The agent's session has ended. Close this chat, or start the agent again.");
+    if ((ended || this.note === "ended") && !this.blocks.length) body = this.empty(t, "The agent's session has ended. Close this chat, or start the agent again.");
     else if (this.note === "no-terminal") body = this.empty(t, "This chat isn't tied to a terminal. Open it from an agent's terminal with ⌘⇧J (Ctrl+Shift+J).");
     else if (this.note === "unsupported") body = this.empty(t, "Chat view supports Claude Code and GigaCode (and Qwen Code). This terminal runs something else.");
     else if (this.note === "waiting") body = this.empty(t, "Waiting for the agent's session log. It appears after the first message.");
@@ -395,7 +399,16 @@ export default class Chat extends View {
       .border_t(1)
       .border_color(t.border)
       .bg(t.chrome)
-      .child(div().rounded(8).border_1().border_color(t.input).bg(t.background).px(8).py(6).child(Textarea.new(this.input).h(64)))
+      // Finch: files and images dropped here go in as their paths.
+      .child(div().id("chat-drop").rounded(8).border_1().border_color(t.input).bg(t.background).px(8).py(6)
+        .on_drop((e, cx) => {
+          const paths = (e.paths ?? []).map((p) => (/\s/.test(p) ? `"${p}"` : p)).join(" ");
+          if (!paths) return;
+          const now = this.input.value();
+          this.input.set_value(now ? `${now} ${paths}` : paths);
+          cx.notify();
+        })
+        .child(Textarea.new(this.input).h(64)))
       .child(
         h_flex()
           .gap(6)
