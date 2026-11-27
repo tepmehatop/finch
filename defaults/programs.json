@@ -3,6 +3,7 @@
   "interpreters": ["node","bun","bunx","deno","python","python3","npx","pnpm","yarn","uv","uvx","ruby","bundle","env","sudo","nice","time","watch","nodemon"],
   "programs": {
     "gigacode": {"name":"GigaCode","icon":"icons/gigacode.svg","run":["gigacode"],"match":["gigacode-cli","gcli"],"tint":true,"tile":"#0f2a1d","color":"#21a038"},
+    "qwen": {"name":"Qwen Code","icon":"icons/agent.svg","run":["qwen"],"match":["qwen-code"],"tint":true,"tile":"#1c1d21","color":"#ffffff"},
     "claude": {"name":"Claude Code","icon":"icons/claude.svg","run":["claude"],"match":["claude-code"],"tint":false,"tile":"#1c1d21","color":"#ffffff"},
     "codex": {"name":"Codex","icon":"icons/codex.svg","run":["codex","--no-daemon"],"tint":false,"tile":"#1c1d21","color":"#ffffff"},
     "pi": {"name":"Pi","icon":"icons/pi.svg","run":["pi"],"tint":true,"tile":"#1c1d21","color":"#ffffff"},

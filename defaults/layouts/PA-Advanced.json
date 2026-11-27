@@ -192,8 +192,8 @@
   ],
   "background": "canvas",
   "theme": {
-    "light": "PA-Advanced-Day",
-    "dark": "PA-Advanced-Night"
+    "light": "paper",
+    "dark": "graphite"
   },
   "terminal_padding": [
     14,

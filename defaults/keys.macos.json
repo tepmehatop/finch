@@ -103,5 +103,8 @@
     "ctrl-shift-tab": "prodsovet.prev-tab",
     "cmd-shift-]": "prodsovet.next-tab",
     "cmd-shift-[": "prodsovet.prev-tab"
+  },
+  "mod:md-editor": {
+    "cmd-s": "md-editor.save"
   }
 }

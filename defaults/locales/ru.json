@@ -342,7 +342,7 @@
     "Close Pane": "Закрыть панель",
     "Close Tab": "Закрыть вкладку",
     "Close Space": "Закрыть пространство",
-    "Edit": "Правка",
+    "Edit": "Редактировать",
     "Find…": "Найти…",
     "View": "Вид",
     "Next Layout": "Следующая раскладка",
@@ -424,7 +424,28 @@
     "Projects, worktrees and agent sessions in one tree; files with an editor and Markdown preview; search; Git.": "Проекты, worktree и сессии агентов одним деревом; файлы с редактором и предпросмотром Markdown; поиск; Git.",
     "The same, lighter: fewer panels.": "То же, но легче: меньше панелей.",
     "All the Better mods in one window: spaces and agents on the left, files and changes on the right.": "Все моды Better в одном окне: пространства и агенты слева, файлы и изменения справа.",
-    "Mods and layouts work without the internet. PA-Advanced uses python3 for file operations; its search uses ripgrep when it's installed.": "Моды и раскладки работают без интернета. PA-Advanced использует python3 для операций с файлами; поиск использует ripgrep, если он установлен, иначе grep."
+    "Mods and layouts work without the internet. PA-Advanced uses python3 for file operations; its search uses ripgrep when it's installed.": "Моды и раскладки работают без интернета. PA-Advanced использует python3 для операций с файлами; поиск использует ripgrep, если он установлен, иначе grep.",
+    "default model": "модель по умолч.",
+    "Markdown editor": "Редактор Markdown",
+    "Open a file…": "Открыть файл…",
+    "Hide preview": "Скрыть предпросмотр",
+    "Show preview": "Показать предпросмотр",
+    "Not saved": "Не сохранено",
+    "Bold": "Жирный",
+    "Italic": "Курсив",
+    "Strikethrough": "Зачёркнутый",
+    "Inline code": "Код в строке",
+    "Heading 1": "Заголовок 1",
+    "Heading 2": "Заголовок 2",
+    "Heading 3": "Заголовок 3",
+    "Bulleted list": "Маркированный список",
+    "Numbered list": "Нумерованный список",
+    "Checklist": "Чек-лист",
+    "Quote": "Цитата",
+    "Link": "Ссылка",
+    "Code block": "Блок кода",
+    "Table": "Таблица",
+    "Divider": "Разделитель"
   },
   "patterns": [
     [
@@ -674,6 +695,10 @@
     [
       "One search for tabs, agents, spaces, files, commands and agent output\\. (.+)",
       "Один поиск по вкладкам, агентам, пространствам, файлам, командам и выводу агентов. $1"
+    ],
+    [
+      "Cannot open (.+): (.+)",
+      "Не удалось открыть $1: $2"
     ]
   ]
 }

@@ -1,0 +1,1 @@
+{ "place": "none", "focusable": true, "title": "Markdown editor", "palette": [{ "title": "Markdown editor", "command": "tab.new", "args": { "mod": "md-editor", "name": "Markdown" }, "words": "markdown md editor редактор" }] }

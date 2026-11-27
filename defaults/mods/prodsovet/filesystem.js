@@ -150,7 +150,9 @@ export function browse(cwd, space) {
 }
 export function newTerminal(place = "tab", id, argv, name) {
   const w = workspace(id);
-  if (place === "tab") run("tab.new", { ...(w.space ? { space: w.space } : {}), ...(w.cwd ? { folder: w.cwd } : {}), ...(argv ? { argv } : {}), ...(name ? { name } : {}) });
+  // Finch: agents the chat reads open with their chat beside them (the + menu's switch).
+  const chat = Boolean(argv) && shared("finch.chatWithAgents") !== false && /(^|\/)(claude|gigacode|qwen)$/.test(argv[0] ?? "");
+  if (place === "tab") run("tab.new", { ...(w.space ? { space: w.space } : {}), ...(w.cwd ? { folder: w.cwd } : {}), ...(argv ? { argv } : {}), ...(name ? { name } : {}), ...(chat ? { chat: true } : {}) });
   else run("terminal.open", { folder: w.cwd, place });
 }
 export function openFile(file, on = null, space = workspace().space) {

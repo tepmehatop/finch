@@ -102,7 +102,11 @@ def strip_network_panels(layout_path: pathlib.Path, mods: set[str]):
             n["floating"] = [walk(c) for c in n["floating"] if keep(c)]
         return n
 
-    layout_path.write_text(json.dumps(walk(node), indent=2, ensure_ascii=False) + "\n")
+    node = walk(node)
+    # Finch: PA layouts start in Finch's palette; their own themes stay in Settings > Look.
+    if layout_path.name in ("PA-Advanced.json", "PA-Light.json"):
+        node["theme"] = {"light": "paper", "dark": "graphite"}
+    layout_path.write_text(json.dumps(node, indent=2, ensure_ascii=False) + "\n")
 
 
 BUILT_IN = {p.name for p in (DEFAULTS / "mods").iterdir() if p.is_dir()} - set(MODS)
@@ -143,7 +147,11 @@ PATCHES = {
         ("    cx.timer.every(CHECK_MS, () => this.check());",
          '    // Finch: Settings > Mods can turn the alerts off.\n    cx.timer.every(CHECK_MS, () => { if ((shared("finch.mods") ?? {})["better-alerts"] !== false) this.check(); });'),
     ],
+    "prodsovet/filesystem.js": [
+        ('  if (place === "tab") run("tab.new", { ...(w.space ? { space: w.space } : {}), ...(w.cwd ? { folder: w.cwd } : {}), ...(argv ? { argv } : {}), ...(name ? { name } : {}) });', '  // Finch: agents the chat reads open with their chat beside them (the + menu\'s switch).\n  const chat = Boolean(argv) && shared("finch.chatWithAgents") !== false && /(^|\\/)(claude|gigacode|qwen)$/.test(argv[0] ?? "");\n  if (place === "tab") run("tab.new", { ...(w.space ? { space: w.space } : {}), ...(w.cwd ? { folder: w.cwd } : {}), ...(argv ? { argv } : {}), ...(name ? { name } : {}), ...(chat ? { chat: true } : {}) });'),
+    ],
     "prodsovet/main.js": [
+        ('      .when(this.hovered, (el) => el\n        .child(this.button(t, `ps-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }))', '      // Finch: agents whose conversation the chat mod reads get a Chat toggle.\n      .when(["claude", "gigacode", "qwen"].includes(p.program?.key) && Boolean(p.terminal), (el) => el.child(div().id(`ps-chat-${pane}`).flex_none().px(7).h(20).flex().items_center().rounded(5)\n        .border_1().border_color(t.border).text_size(11.5).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground))\n        .on_click((_e, cx) => { cx.stop_propagation(); run("agent.chat", { terminal: p.terminal }); })\n        .child("Chat")))\n      .when(this.hovered, (el) => el\n        .child(this.button(t, `ps-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }))'),
         ('.on_click(() => setShared("ui.lang", code))', '.on_click(() => { setShared("ui.lang", code); setLanguage(code); })'),
         ('nextCommand, openOverlay } from "finch";', 'nextCommand, openOverlay, setLanguage } from "finch";'),
     ],

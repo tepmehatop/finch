@@ -10,6 +10,7 @@ mod edition;
 mod files;
 mod hc;
 mod i18n;
+mod agent_setup;
 mod tail;
 mod keys;
 mod layout;
@@ -179,6 +180,7 @@ fn main() {
         update::after_update(core.clone());
     }
     i18n::init();
+    agent_setup::ensure_status_in_title();
     update::start();
     telemetry::start(settings::telemetry_setting(&person));
     bench::start();

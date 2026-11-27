@@ -1,7 +1,7 @@
 // A lazy file browser for the focused pane's folder, with bounded read-only previews.
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings, window } from "finch";
+import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings, window, run } from "finch";
 
 // The panels share data in one VM, but their host tasks belong to separate copies.
 const scans = globalThis[Symbol.for("finch.repoStatus.v2")] ??= new Map();
@@ -274,7 +274,12 @@ export default class Files extends View {
       .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
         .when(Boolean(this.file), el => el.child(div().id("files-back").w(20).cursor_pointer().text_color(t.muted).on_click((_e, cx) => { this.show(null); cx.notify(); }).child("←")))
         .child(div().font_semibold().child("Files"))
-        .child(div().flex_1().min_w(0).truncate().text_right().text_size(12).text_color(t.dim).child(this.file ?? this.root?.split(/[\\/]/).pop() ?? "")))
+        .child(div().flex_1().min_w(0).truncate().text_right().text_size(12).text_color(t.dim).child(this.file ?? this.root?.split(/[\\/]/).pop() ?? ""))
+        // Finch: Markdown files open in the editor with a toolbar and preview.
+        .when(Boolean(this.file) && /\.(md|markdown)$/i.test(this.file ?? ""), el => el.child(div().id("files-edit").flex_none().px(8).py(2).rounded(5).border_1().border_color(t.border)
+          .text_size(12).cursor_pointer().hover(s => s.bg(t.hover))
+          .on_click(() => { const f = this.file.startsWith("/") ? this.file : `${this.root}/${this.file}`; run("tab.new", { mod: "md-editor", props: { file: f }, name: f.split("/").pop() }); })
+          .child("Edit"))))
       .when(!this.file, el => el.child(v_flex().id("files-tree").flex_1().min_h(0).overflow_y_scrollbar().p(6).children(this.rows("", 0, [], t))
         .when(Boolean(this.error) || !this.entries.get("")?.length, el => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.error || (this.loading ? "Loading files…" : this.root ? "No files" : "No folder"))))
         .when(this.limited, el => el.child(div().p(8).text_size(11).text_color(t.dim).child("File list limited to 500 entries per folder and 5,000 total")))))

@@ -1,9 +1,25 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, spaces, panes, knownAgents, run, openOverlay, closeOverlay, props, window, keys, shared, setShared } from "finch";
+import { theme, spaces, panes, knownAgents, run, openOverlay, closeOverlay, props, window, keys, shared, setShared, readTextFile, home } from "finch";
 
 // Finch: programs the chat mod can read (mods/chat/main.js).
 const CHAT = new Set(["claude", "gigacode", "qwen"]);
+
+// Finch: models people can pick per agent, and the flag that passes one at launch.
+// GigaCode's list comes from its token file (config.chat.models / config.agent.models).
+const MODEL_FLAG = { gigacode: "-m", qwen: "-m", claude: "--model", codex: "-m" };
+const FIXED_MODELS = { claude: ["sonnet", "opus", "haiku"] };
+
+async function gigacodeModels() {
+  try {
+    const text = await readTextFile(`${home()}/.gigacode/gigacode_token.json`);
+    const cfg = JSON.parse(text ?? "{}").config ?? {};
+    const names = [...(cfg.chat?.models ?? []), ...(cfg.agent?.models ?? [])].map(m => m?.model ?? m?.name ?? m?.id).filter(Boolean);
+    return [...new Set(names)];
+  } catch {
+    return [];
+  }
+}
 
 // The last agents each machine reported, shown at once while knownAgents() checks again.
 const KNOWN = "new-menu.agents";
@@ -32,28 +48,48 @@ export default class NewMenu extends View {
     this.agents = shared(KNOWN)?.[where] ?? [];
     this.handle = cx.focus_handle();
     this.handle.focus();
+    this.models = { ...FIXED_MODELS };
     cx.spawn(async cx => {
       try {
         this.agents = await knownAgents({ on: machine });
         setShared(KNOWN, { ...shared(KNOWN), [where]: this.agents });
+        // Finch: GigaCode's models, read only when it's installed here.
+        if (!machine && this.agents.some(a => a.key === "gigacode" && a.installed)) {
+          const giga = await gigacodeModels();
+          if (giga.length) this.models = { ...this.models, gigacode: giga };
+        }
       }
       catch { this.failed = true; }
       cx.notify();
     });
   }
-  row(id, icon, name, action, hint = "", enabled = true) {
+  row(id, icon, name, action, hint = "", enabled = true, extra = null) {
     const t = theme();
     return h_flex().id(id).h(31).px(9).gap(10).rounded(7).items_center().flex_none()
       .text_color(enabled ? t.foreground : t.dim).when(enabled, el => el.hover(s => s.bg(t.selected)))
       .on_click(() => { if (enabled) { closeOverlay(props().overlay); action(); } })
-      .child(icon).child(div().flex_1().child(name)).child(div().text_size(11).text_color(t.dim).child(hint));
+      .child(icon).child(div().flex_1().child(name)).when(Boolean(extra), el => el.child(extra)).child(div().text_size(11).text_color(t.dim).child(hint));
   }
   render() {
     const t = theme();
     const space = spaces().find(s => s.active);
     // Finch: agents the chat reads open with their chat beside them, unless turned off below.
     const withChat = shared("finch.chatWithAgents") !== false;
-    const startAgent = agent => run("tab.new", { space: space?.id, argv: agent.run, ...(withChat && CHAT.has(agent.key) ? { chat: true } : {}) });
+    const model = key => shared(`finch.model.${key}`) ?? null;
+    const argvOf = agent => (model(agent.key) && MODEL_FLAG[agent.key] ? [...agent.run, MODEL_FLAG[agent.key], model(agent.key)] : agent.run);
+    const startAgent = agent => run("tab.new", { space: space?.id, argv: argvOf(agent), ...(withChat && CHAT.has(agent.key) ? { chat: true } : {}) });
+    // Finch: a chip on an agent's row cycles through its models (none = the agent's default).
+    const modelChip = agent => {
+      const list = (this.models ?? FIXED_MODELS)[agent.key] ?? [];
+      if (!list.length || !agent.installed) return null;
+      const now = model(agent.key);
+      const next = now === null ? list[0] : list.indexOf(now) + 1 < list.length ? list[list.indexOf(now) + 1] : null;
+      return div().id(`model-${agent.key}`).flex_none().px(6).h(20).flex().items_center().rounded(5).border_1().border_color(t.border)
+        .text_size(11).text_color(now ? t.foreground : t.dim).hover(s => s.bg(t.hover))
+        .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
+        .on_click((_e, cx) => { cx.stop_propagation(); setShared(`finch.model.${agent.key}`, next); cx.notify(); })
+        .child(now ?? "default model");
+    };
     const installed = this.agents.filter(a => a.installed);
     const choices = this.failed ? installed : [...installed, ...this.agents.filter(a => !a.installed).slice(0, 2)];
     return v_flex().min_h(0).w_full().h(Math.min(520, 196 + Math.max(1, choices.length + (this.failed ? 1 : 0)) * 31)).bg(t.popover).p(5).text_size(12.8)
@@ -69,7 +105,7 @@ export default class NewMenu extends View {
       .child(div().px(9).pt(8).pb(4).text_size(11).text_color(t.dim).child("Start an agent"))
       .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar()
         .children(choices.map((a, i) => this.row(a.key, a.tint ? svg(a.icon).size(14).text_color(t.foreground) : image(a.icon).size(14), a.name,
-          () => startAgent(a), a.installed ? (i < 9 ? String(i + 1) : "") : "not installed", a.installed)))
+          () => startAgent(a), a.installed ? (i < 9 ? String(i + 1) : "") : "not installed", a.installed, modelChip(a))))
         .when(this.failed || this.agents.length === 0, el => el.child(div().px(9).py(6).text_color(t.dim).child(this.failed ? "Could not check installed agents" : "Checking installed agents…"))))
       .child(h_flex().id("chat-with-agents").h(29).px(9).gap(8).items_center().rounded(7).cursor_pointer().hover(el => el.bg(t.selected))
         .on_click((_e, cx) => { setShared("finch.chatWithAgents", !withChat); cx.notify(); })

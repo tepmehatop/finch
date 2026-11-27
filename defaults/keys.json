@@ -102,5 +102,8 @@
     "ctrl-shift-tab": "prodsovet.prev-tab",
     "ctrl-pagedown": "prodsovet.next-tab",
     "ctrl-pageup": "prodsovet.prev-tab"
+  },
+  "mod:md-editor": {
+    "ctrl-s": "md-editor.save"
   }
 }

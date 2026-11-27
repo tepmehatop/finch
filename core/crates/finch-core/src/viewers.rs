@@ -228,6 +228,12 @@ impl Core {
         if !reports.is_empty() {
             self.report_status(st, id, &reports);
         }
+        // Finch: Qwen Code and GigaCode CLI say their state only in the title.
+        if let Some(title) = &title
+            && let Some(report) = st.reg.terminals.get(&id).and_then(|t| crate::title_status::infer(t, title))
+        {
+            self.report_status(st, id, &[report]);
+        }
         if let Some(title) = title {
             st.reg.terminals.get_mut(&id).expect("live terminal").title = title.clone();
             self.save_soon();

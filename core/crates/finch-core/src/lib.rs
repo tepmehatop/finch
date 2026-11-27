@@ -33,6 +33,8 @@ pub mod stitch;
 pub mod sweep;
 pub mod templates;
 pub mod terminals;
+/// Finch: status from the terminal title for Qwen Code and GigaCode CLI.
+pub mod title_status;
 pub mod viewers;
 pub mod wait;
 pub mod wire;
