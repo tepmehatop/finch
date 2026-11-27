@@ -10,6 +10,7 @@ use crate::foreground::Foreground;
 /// The agents this knows and how each continues its latest session.
 const AGENTS: &[(&str, &str)] = &[
     ("claude", "claude --continue"),
+    ("gigacode-qa", "gigacode-qa --continue"),
     ("gigacode", "gigacode --continue"),
     ("qwen", "qwen --continue"),
     ("codex", "codex resume --last"),

@@ -524,7 +524,18 @@
     "Couldn't start": "Не удалось запустить",
     "Issues from Jira Server, Data Center or Cloud by a JQL query; one goes to an agent on a new branch.": "Задачи из Jira Server, Data Center или Cloud по JQL-запросу; задача уходит агенту в новой ветке.",
     "More": "Ещё",
-    "Panels": "Панели"
+    "Panels": "Панели",
+    "Open agents as": "Открывать агента",
+    "Both": "Оба",
+    "Looking in:": "Ищу здесь:",
+    "Choose the log file…": "Выбрать файл лога…",
+    "Use this log": "Использовать этот лог",
+    "How a new agent opens: its terminal, its chat, or both side by side. Each agent's header switches it any time; the terminal keeps running behind the chat.": "Как открывается новый агент: терминал, чат или оба рядом. Заголовок агента переключает вид в любой момент; терминал продолжает работать за чатом.",
+    "Issues": "Задачи",
+    "GigaCode (project)": "GigaCode (проект)",
+    "Qwen Code (project)": "Qwen Code (проект)",
+    "Claude Code (project)": "Claude Code (проект)",
+    "Project (.agents/skills)": "Проект (.agents/skills)"
   },
   "patterns": [
     [

@@ -20,7 +20,10 @@ export const TARGETS = "skillsgate.targets.v1"; // { [machineKey]: tool names }:
 // Runs `script` with sh on machine `on` (null: this computer). Never rejects:
 // a program that can't start or a machine that can't be reached comes back
 // as code -1 with the reason in stderr, without Finch's "`finch.exec`: ".
-export const exec = adaptExec(hostExec);
+// Finch: on this computer scripts run in the active space's folder, so a scan
+// also finds the project's own skills.
+const projectFolder = () => (spaces() ?? []).find((s) => s.active)?.folder || undefined;
+export const exec = adaptExec((program, args, options) => hostExec(program, args, options?.on ? options : { ...options, cwd: projectFolder() }));
 
 // Resolves the text, null only when the file is absent, and rejects on any
 // other failure (Finch's readTextFile already behaves so), with Finch's

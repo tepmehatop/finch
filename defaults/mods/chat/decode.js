@@ -25,6 +25,7 @@ function textOf(content) {
 // Claude Code: ~/.claude/projects/<cwd with non-alphanumerics as "-">/<session>.jsonl
 function claude(rec, off) {
   const out = [];
+  if (rec.type === "assistant" && rec.message?.model && !String(rec.message.model).startsWith("<")) out.push({ kind: "meta", model: rec.message.model, off });
   if (rec.isMeta || rec.isSidechain) return out;
   const m = rec.message;
   if (!m) return out;
@@ -53,6 +54,8 @@ function claude(rec, off) {
 // message.parts in the Gemini shape (text, thought, functionCall, functionResponse).
 function qwen(rec, off) {
   const out = [];
+  const model = rec.model ?? rec.message?.model ?? rec.systemPayload?.model ?? rec.payload?.model;
+  if (typeof model === "string" && model) out.push({ kind: "meta", model, off });
   if (rec.type === "system") {
     if (rec.subtype === "chat_compression") out.push({ kind: "note", text: "Context compressed", off });
     return out;
@@ -75,6 +78,42 @@ function qwen(rec, off) {
 }
 
 export const DECODERS = { claude, gigacode: qwen, qwen };
+
+// Older Gemini-CLI-style forks keep a session as one JSON document:
+// { messages: [{ type: "user" | "gemini" | "info" | "error", content, thoughts, toolCalls, model }] }.
+export function decodeJson(text) {
+  let doc;
+  try {
+    doc = JSON.parse(text);
+  } catch {
+    return [];
+  }
+  const out = [];
+  const messages = Array.isArray(doc) ? doc : doc.messages ?? [];
+  messages.forEach((m, i) => {
+    const key = (k) => `j${i}:${k}`;
+    if (m.model) out.push({ kind: "meta", model: m.model, off: 0, key: key("m") });
+    const text = textOf(Array.isArray(m.content) ? m.content.map((p) => p?.text ?? "") : m.content);
+    if (m.type === "user") {
+      if (text.trim()) out.push({ kind: "user", text: clip(text.trim(), MAX_TEXT), off: 0, key: key("u") });
+      return;
+    }
+    if (m.type === "info" || m.type === "warning" || m.type === "error") {
+      if (text.trim()) out.push({ kind: "note", text: clip(text.trim(), 400), off: 0, key: key("n") });
+      return;
+    }
+    (m.thoughts ?? []).forEach((th, j) => {
+      const t = [th.subject, th.description].filter(Boolean).join(": ");
+      if (t) out.push({ kind: "thinking", text: clip(t, MAX_TEXT), off: 0, key: key(`t${j}`) });
+    });
+    if (text.trim()) out.push({ kind: "assistant", text: clip(text, MAX_TEXT), off: 0, key: key("a") });
+    (m.toolCalls ?? []).forEach((c, j) => {
+      const res = Array.isArray(c.result) ? c.result.map((r) => r?.functionResponse?.response?.output ?? r?.functionResponse?.response?.error ?? r?.text ?? "").join("\n") : textOf(c.result ?? c.resultDisplay ?? "");
+      out.push({ kind: "tool", id: c.id ?? null, name: c.displayName ?? c.name, input: c.args ?? {}, result: c.status === "executing" ? undefined : clip(res, MAX_RESULT), error: c.status === "error", off: 0, key: key(`c${j}`) });
+    });
+  });
+  return out;
+}
 
 // Folds tool results into their calls: by id, else into the last call still
 // waiting (some CLI versions leave the id out of the response).

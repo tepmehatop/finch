@@ -12,8 +12,8 @@
 
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, ScrollHandle, Scrollbar, TextView, TextareaState, Textarea } from "gpui-base";
-import { theme, props, terminals, agents, hc, run, fileTail, fileBefore, recentFiles, checking, settings, window, tr, shared } from "finch";
-import { decodeLines, fold, summary, clip } from "./decode.js";
+import { theme, props, terminals, agents, hc, run, exec, home, readTextFile, pickFiles, fileTail, fileBefore, recentFiles, checking, settings, window, tr, shared, setShared } from "finch";
+import { decodeLines, decodeJson, fold, summary, clip } from "./decode.js";
 
 const KEEP = 300; // blocks held while following the end
 const BROWSE = 1500; // the most held while reading back
@@ -22,53 +22,51 @@ const PAGE = 512 * 1024; // bytes read per "Show earlier"
 const FOLLOW = 2 * 1024 * 1024; // the most read per follow tick
 const W = (name) => `mods/workspace-chrome/${name}.svg`;
 
+const CLAIMS = "finch.chat.claims"; // log path → the terminal whose chat shows it
+const MANUAL = "finch.chat.manual"; // terminal → a log the person picked
+
+// Which log family a terminal's agent writes, by program, report or command.
+// GigaCode clones (gigacode-qa, ...) share GigaCode's folder and format.
 function kindOf(term) {
   const exe = (term?.argv?.[0] ?? "").split("/").pop();
-  for (const k of [term?.program?.key, term?.report?.app, exe]) {
+  for (const k of [term?.program?.key, term?.report?.app, exe, term?.foreground?.name]) {
+    if (!k) continue;
     if (k === "claude" || k === "claude-code") return "claude";
-    if (k === "gigacode" || k === "gigacode-cli" || k === "gcli") return "gigacode";
+    if (k.startsWith("gigacode") || k === "gcli") return "gigacode";
     if (k === "qwen" || k === "qwen-code") return "qwen";
+  }
+  for (const a of term?.foreground?.argv ?? []) {
+    const base = a.split("/").pop();
+    if (base.startsWith("gigacode")) return "gigacode";
+    if (base === "qwen" || a.includes("/qwen-code/")) return "qwen";
+    if (base === "claude") return "claude";
   }
   return null;
 }
 
-// Where each CLI keeps this folder's session logs; the newest one is the live session.
-function locate(kind, cwd) {
-  if (!cwd) return { dir: null };
-  if (kind === "claude") {
-    const dir = `~/.claude/projects/${cwd.replace(/[^A-Za-z0-9]/g, "-")}`;
-    const f = recentFiles(dir, ".jsonl", 0, 1)[0];
-    return { dir, path: f?.path ?? null };
-  }
-  const root = kind === "qwen" ? "~/.qwen" : "~/.gigacode";
-  const dir = `${root}/projects/${cwd.replace(/\//g, "-")}/chats`;
-  const f = recentFiles(dir, ".jsonl", 0, 1)[0];
-  if (f) return { dir, path: f.path };
-  // Older layout, ~/.<cli>/tmp/<project hash>/chats/: the newest log whose records name this folder.
-  for (const c of recentFiles(`${root}/tmp`, ".jsonl", 3, 15)) {
-    try {
-      const head = fileTail(c.path, 0, 64 * 1024).lines.slice(0, 8);
-      const here = head.some((l) => {
-        try {
-          return JSON.parse(l).cwd === cwd;
-        } catch {
-          return false;
-        }
-      });
-      if (here) return { dir, path: c.path };
-    } catch {}
-  }
-  return { dir, path: null };
+// A value given after `flag` in the agent's command (`--session-id x`, `-m x`).
+function argAfter(argv, ...flags) {
+  for (let i = 0; i < (argv?.length ?? 0) - 1; i++) if (flags.includes(argv[i])) return argv[i + 1];
+  for (const a of argv ?? []) for (const f of flags) if (a.startsWith(`${f}=`)) return a.slice(f.length + 1);
+  return null;
 }
+
+const sanitize = (p) => p.replace(/[^A-Za-z0-9]/g, "-");
 
 export default class Chat extends View {
   init(_props, cx) {
     this.address = props()?.terminal ?? null;
+    this.born = Date.now();
+    this.seen = false;
     this.kind = null;
     this.path = null;
+    this.format = "jsonl";
     this.blocks = [];
     this.first = 0;
     this.end = 0;
+    this.size = 0;
+    this.model = null;
+    this.dirs = null;
     this.open = new Set();
     this.atEnd = true;
     this.note = null;
@@ -76,15 +74,20 @@ export default class Chat extends View {
     this.input = TextareaState.new({ placeholder: tr("Message the agent… (⌘↵ or Ctrl+↵ sends)"), rows: 3 });
     this.input.on("submit", (_e, cx) => this.send(cx));
     if (checking()) return;
-    this.attach();
-    this.toEnd();
+    cx.spawn(async (cx) => {
+      // A chat opened with its agent waits (up to 15 s) for the terminal to be listed.
+      for (let i = 0; i < 30 && this.address && !this.term(); i++) await cx.sleep(500);
+      await this.attach();
+      this.toEnd();
+      cx.notify();
+    });
     cx.timer.every(1200, (cx) => {
       if (window()?.visible === false) return;
-      if (this.follow()) cx.notify();
+      if (this.follow(cx)) cx.notify();
     });
-    cx.timer.every(8000, (cx) => {
+    cx.timer.every(6000, (cx) => {
       if (window()?.visible === false) return;
-      if (this.relocate()) cx.notify();
+      cx.spawn(async (cx) => { if (await this.relocate()) cx.notify(); });
     });
   }
 
@@ -92,32 +95,120 @@ export default class Chat extends View {
     return terminals().find((t) => t.address === this.address) ?? null;
   }
 
-  attach() {
+  // The folders this agent's logs can be in, for this terminal's folder and its repository.
+  async places(term) {
+    const cwd = term.foreground?.cwd || term.cwd;
+    const roots = [cwd];
+    const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd }).catch(() => null);
+    if (top?.code === 0 && top.stdout.trim()) roots.unshift(top.stdout.trim());
+    if (this.kind === "claude") return { roots, dirs: roots.map((r) => ({ dir: `~/.claude/projects/${sanitize(r)}`, depth: 0 })) };
+    const base = this.kind === "qwen" ? "~/.qwen" : "~/.gigacode";
+    const dirs = [];
+    for (const r of roots) {
+      dirs.push({ dir: `${base}/projects/${sanitize(r)}/chats`, depth: 0 });
+      const h = await exec("sh", ["-c", 'printf %s "$1" | (shasum -a 256 2>/dev/null || sha256sum) | cut -d" " -f1', "sh", r]).catch(() => null);
+      const hash = h?.stdout.trim();
+      if (hash) dirs.push({ dir: `${base}/tmp/${hash}/chats`, depth: 0 });
+    }
+    return { roots, dirs, base };
+  }
+
+  candidates() {
+    const out = [];
+    for (const { dir, depth } of this.dirs?.dirs ?? []) {
+      for (const suffix of [".jsonl", ".json"]) out.push(...recentFiles(dir, suffix, depth, 20));
+    }
+    return out.sort((a, b) => b.modified - a.modified);
+  }
+
+  // Which log is this terminal's session: the one it was started with (--session-id),
+  // the one the person picked, else the newest that no other chat shows.
+  pick(term) {
+    const manual = (shared(MANUAL) ?? {})[this.address];
+    if (manual) return manual;
+    const files = this.candidates();
+    const id = argAfter(term.argv, "--session-id", "--resume") ?? argAfter(term.foreground?.argv, "--session-id", "--resume");
+    if (id) {
+      const own = files.find((f) => f.path.includes(id));
+      if (own) return own.path;
+    }
+    const claims = shared(CLAIMS) ?? {};
+    const live = new Set(terminals().map((t) => t.address));
+    const free = files.filter((f) => !claims[f.path] || claims[f.path] === this.address || !live.has(claims[f.path]));
+    const since = (term.created_ms ?? 0) - 10000;
+    return (free.find((f) => f.modified >= since) ?? free[0])?.path ?? null;
+  }
+
+  claim(path) {
+    const claims = { ...(shared(CLAIMS) ?? {}) };
+    for (const [p, t] of Object.entries(claims)) if (t === this.address && p !== path) delete claims[p];
+    claims[path] = this.address;
+    setShared(CLAIMS, claims);
+  }
+
+  async attach() {
     const term = this.term();
     if (!term) {
-      this.note = this.address ? "ended" : "no-terminal";
+      // A chat opened with its agent can start before the terminal is listed:
+      // the session has ended only once its terminal was seen, or after 15 s.
+      const young = Date.now() - this.born < 15000;
+      this.note = !this.address ? "no-terminal" : this.seen || !young ? "ended" : null;
       return;
     }
+    this.seen = true;
+    if (this.note === "ended" || this.note === "no-terminal") this.note = null;
     this.kind = kindOf(term);
     if (!this.kind) {
       this.note = "unsupported";
       return;
     }
-    const loc = locate(this.kind, term.cwd);
-    if (!loc.path) {
+    this.dirs = await this.places(term);
+    this.model = argAfter(term.argv, "-m", "--model") ?? argAfter(term.foreground?.argv, "-m", "--model") ?? (await this.defaultModel());
+    const path = this.pick(term);
+    if (!path) {
       this.note = "waiting";
       return;
     }
-    this.load(loc.path);
+    await this.load(path);
   }
 
-  load(path) {
+  async defaultModel() {
+    if (this.kind === "claude") return null;
+    const base = this.kind === "qwen" ? "~/.qwen" : "~/.gigacode";
     try {
-      const r = fileTail(path, null, FIRST);
-      this.path = path;
-      this.blocks = fold([], decodeLines(this.kind, r.lines, r.start));
-      this.first = r.start;
-      this.end = r.end;
+      const d = JSON.parse((await readTextFile(`${home()}${base.slice(1)}/settings.json`)) ?? "{}");
+      return typeof d.model === "string" ? d.model : d.model?.name ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  take(blocks) {
+    const shown = [];
+    for (const b of blocks) {
+      if (b.kind === "meta") { if (b.model) this.model = b.model; }
+      else shown.push(b);
+    }
+    return shown;
+  }
+
+  async load(path) {
+    this.path = path;
+    this.format = path.endsWith(".json") ? "json" : "jsonl";
+    this.claim(path);
+    try {
+      if (this.format === "json") {
+        const text = (await readTextFile(path)) ?? "";
+        this.size = text.length;
+        this.blocks = fold([], this.take(decodeJson(text)));
+        if (this.blocks.length > KEEP) this.blocks.splice(0, this.blocks.length - KEEP);
+        this.first = 0;
+      } else {
+        const r = fileTail(path, null, FIRST);
+        this.blocks = fold([], this.take(decodeLines(this.kind, r.lines, r.start)));
+        this.first = r.start;
+        this.end = r.end;
+      }
       this.note = null;
     } catch (e) {
       this.note = "unreadable";
@@ -126,26 +217,36 @@ export default class Chat extends View {
   }
 
   // New lines since the last look. True when something changed.
-  follow() {
+  follow(cx) {
     if (!this.path) return false;
     let r;
     try {
-      r = fileTail(this.path, this.end, FOLLOW);
+      r = fileTail(this.path, this.format === "json" ? null : this.end, this.format === "json" ? 1 : FOLLOW);
     } catch {
       return false;
     }
+    if (this.format === "json") {
+      // A JSON session is rewritten whole: read it again when it changes.
+      if (r.size === this.size) return false;
+      this.size = r.size;
+      cx.spawn(async (cx) => {
+        const wasAtEnd = this.isAtEnd();
+        await this.load(this.path);
+        if (wasAtEnd) this.toEnd();
+        cx.notify();
+      });
+      return false;
+    }
     if (r.size < this.end) {
-      // The log was replaced or cut: read its end again.
-      this.load(this.path);
-      this.toEnd();
-      return true;
+      cx.spawn(async (cx) => { await this.load(this.path); this.toEnd(); cx.notify(); });
+      return false;
     }
     if (!r.lines.length) {
       this.end = r.end;
       return false;
     }
     const wasAtEnd = this.isAtEnd();
-    fold(this.blocks, decodeLines(this.kind, r.lines, r.start));
+    fold(this.blocks, this.take(decodeLines(this.kind, r.lines, r.start)));
     this.end = r.end;
     if (wasAtEnd) {
       if (this.blocks.length > KEEP) {
@@ -157,28 +258,42 @@ export default class Chat extends View {
     return true;
   }
 
-  // A newer log in the same place means a new session (/clear, a restart).
-  relocate() {
-    if (!this.kind) {
-      this.attach();
-      return Boolean(this.kind);
+  // A newer log of this terminal's own means a new session (/clear, a restart).
+  // A log another chat shows, or one appearing while ours still grows, is not ours.
+  async relocate() {
+    if (!this.kind || !this.path) {
+      await this.attach();
+      return Boolean(this.path);
     }
     const term = this.term();
-    if (!term) return false;
-    const loc = locate(this.kind, term.cwd);
-    if (!loc.path || loc.path === this.path) return false;
+    if (!term || (shared(MANUAL) ?? {})[this.address]) return false;
+    const next = this.pick(term);
+    if (!next || next === this.path) return false;
+    const mine = this.candidates().find((f) => f.path === this.path);
+    if (mine && Date.now() - mine.modified < 60000) return false;
     const before = this.blocks.length;
-    this.load(loc.path);
+    await this.load(next);
     if (before) this.blocks.unshift({ kind: "note", text: "New session", off: this.first, key: `new-${this.first}` });
     this.toEnd();
     return true;
   }
 
+  choose(cx) {
+    cx.spawn(async (cx) => {
+      const files = await pickFiles({ prompt: "Use this log" }).catch(() => null);
+      if (!files?.length) return;
+      setShared(MANUAL, { ...(shared(MANUAL) ?? {}), [this.address]: files[0] });
+      await this.load(files[0]);
+      this.toEnd();
+      cx.notify();
+    });
+  }
+
   earlier() {
-    if (!this.path || this.first <= 0 || this.blocks.length >= BROWSE) return;
+    if (!this.path || this.format === "json" || this.first <= 0 || this.blocks.length >= BROWSE) return;
     try {
       const r = fileBefore(this.path, this.first, PAGE);
-      const older = fold([], decodeLines(this.kind, r.lines, r.start));
+      const older = fold([], this.take(decodeLines(this.kind, r.lines, r.start)));
       this.blocks = older.concat(this.blocks);
       this.first = r.start;
       this.atEnd = false;
@@ -339,7 +454,7 @@ export default class Chat extends View {
     const status = agent?.status ?? null;
     const name = term?.program?.name ?? "Agent";
     const statusLabel = { working: "Working", blocked: "Needs you", done: "Done", idle: "Idle" }[status] ?? null;
-    const ended = Boolean(this.address) && !term && this.note !== "no-terminal";
+    const ended = Boolean(this.address) && !term && this.note !== "no-terminal" && (this.seen || Date.now() - this.born >= 15000);
     const statusColor = { working: t.working, blocked: t.blocked, done: t.done, idle: t.idle }[status] ?? t.dim;
 
     const header = h_flex()
@@ -352,18 +467,24 @@ export default class Chat extends View {
       .border_color(t.border)
       .bg(t.chrome)
       .child(div().text_size(13).font_semibold().text_color(t.foreground).child(name))
+      .when(Boolean(this.model), (el) => el.child(div().px(6).py(1).rounded(5).border_1().border_color(t.border).text_size(11).text_color(t.muted).child(this.model)))
       .when(Boolean(statusLabel), (el) => el.child(h_flex().gap(5).items_center().child(div().size(6).rounded(3).bg(statusColor)).child(div().text_size(12).text_color(t.muted).child(statusLabel))))
       .child(div().flex_1())
       .when(Boolean(this.path), (el) => el.child(this.button(t, "chat-end", "Latest", (_e, cx) => { this.toEnd(); cx.notify(); })))
       .when(ended, (el) => el.child(div().text_size(12).text_color(t.dim).child("Session ended")))
-      .when(Boolean(term), (el) => el.child(this.button(t, "chat-terminal", "Terminal", () => run("pane.focus", { terminal: this.address }))))
-      .when(Boolean(props()?.pane), (el) => el.child(this.button(t, "chat-close", "Close", () => run("pane.close", { pane: props().pane }))));
+      .when(Boolean(term), (el) => el
+        .child(this.button(t, "chat-terminal", "Terminal", () => run("agent.view", { terminal: this.address, view: "terminal" })))
+        .child(this.button(t, "chat-both", "Both", () => run("agent.view", { terminal: this.address, view: "both" }))));
 
     let body;
     if ((ended || this.note === "ended") && !this.blocks.length) body = this.empty(t, "The agent's session has ended. Close this chat, or start the agent again.");
     else if (this.note === "no-terminal") body = this.empty(t, "This chat isn't tied to a terminal. Open it from an agent's terminal with ⌘⇧J (Ctrl+Shift+J).");
     else if (this.note === "unsupported") body = this.empty(t, "Chat view supports Claude Code and GigaCode (and Qwen Code). This terminal runs something else.");
-    else if (this.note === "waiting") body = this.empty(t, "Waiting for the agent's session log. It appears after the first message.");
+    else if (this.note === "waiting") body = v_flex().size_full().items_center().justify_center().p(24).gap(10)
+      .child(div().max_w(520).text_size(13).text_color(t.muted).text_center().child("Waiting for the agent's session log. It appears after the first message."))
+      .child(div().text_size(11.5).text_color(t.dim).child("Looking in:"))
+      .children((this.dirs?.dirs ?? []).map((d) => div().max_w(560).truncate().text_size(11).font_family(settings().font_family ?? "JetBrains Mono").text_color(t.dim).child(d.dir)))
+      .child(this.button(t, "chat-pick", "Choose the log file…", (_e, cx) => this.choose(cx)));
     else if (this.note === "unreadable") body = this.empty(t, `Cannot read the session log: ${this.error ?? ""}`);
     else {
       const more = this.first > 0 && this.blocks.length < BROWSE;

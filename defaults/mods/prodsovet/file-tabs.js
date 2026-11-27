@@ -7,19 +7,21 @@ import { conversationTitle } from "./antigravity-titles.js";
 import { checkoutContext, selectProjectTab, nextProjectTab, openSessionMenu } from "./project-context.js";
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, ScrollHandle } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings, terminals } from "finch";
+import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings, terminals, finch } from "finch";
 
-// Finch: its own panels, added to this layout's side panel: [id, English, icon, Russian].
+// Finch: the side panels behind More, the same in every layout: [id, English, icon, Russian].
 const FINCH_PANELS = [
-  ["review", "Review", "mods/changes/changes.svg", "Ревью"],
   ["asks", "Questions", "frame/welcome/messages.svg", "Вопросы"],
   ["git-graph", "Git graph", "mods/workspace-chrome/branch.svg", "Граф Git"],
   ["skillsgate", "Skills", "frame/welcome/layers.svg", "Навыки"],
   ["mcp", "MCP", "frame/welcome/layers.svg", "MCP"],
   ["jira", "Jira", "mods/workspace-chrome/branch.svg", "Jira"],
   ["prompts", "Prompts", "frame/palette/command.svg", "Промпты"],
+  ["github", "GitHub", "mods/workspace-chrome/branch.svg", "GitHub"],
+  ["issues", "Issues", "frame/welcome/messages.svg", "Задачи"],
 ];
-const finchPanel = (id) => (shared("finch.mods") ?? {})[id] !== false && Boolean(find(layout(), id));
+// GitHub and Issues don't exist in the closed edition.
+const finchPanel = (id) => (shared("finch.mods") ?? {})[id] !== false && !(finch()?.closed && (id === "github" || id === "issues")) && Boolean(find(layout(), id));
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -162,8 +164,7 @@ export default class Tabs extends View {
       .child(button("tab-new", agency() ? svg(icon("plus")).size(15) : "+", () => unified ? openSessionMenu(space) : openOverlay({ mod: "prodsovet", kind: "popup", width: 250, height: 512, props: { role: "new-menu" } })))
       .when(enabled.includes("files"), el => el.child(panelButton("files", L("Files", "Файлы"), icon("file", "mods/files/file.svg"))))
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", L("Changes", "Изменения"), icon("changes", "mods/changes/changes.svg"))))
-      .when(enabled.includes("github"), el => el.child(panelButton("github", "GitHub", icon("pr", "mods/workspace-chrome/branch.svg"))))
-      .when(enabled.includes("issues"), el => el.child(panelButton("issues", L("Issues", "Задачи"), "mods/prodsovet/art/px/issue.svg")))
+      .when(finchPanel("review"), el => el.child(panelButton("review", L("Review", "Ревью"), "mods/changes/changes.svg")))
       // Finch: Finch's panels (review, MCP, Jira, prompts...) behind More; the one shown keeps its button.
       .when(FINCH_PANELS.some(([id]) => finchPanel(id)), el => {
         const shownId = panel && !panel.hidden ? body?.active : null;

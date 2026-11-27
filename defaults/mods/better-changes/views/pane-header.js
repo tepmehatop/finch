@@ -3,6 +3,9 @@
 // A layout turns it on with { "header": { "content": { "mod": "better-changes" } } }.
 import { div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
+
+// Finch: agents whose conversation the chat mod reads.
+const CHAT = new Set(["claude", "gigacode", "gigacode-qa", "qwen"]);
 import { panes, props, run, theme, home, shared } from "finch";
 
 function programIcon(program, size, color) {
@@ -112,6 +115,13 @@ export const paneHeaderMethods = {
         ),
       )
       .when(p.status === "done", (el) => el.child(div().size(7).flex_none().rounded(4).bg(t.done)))
+      // Finch: terminal, chat or both for agents the chat mod reads.
+      .when(CHAT.has(p.program?.key) && Boolean(p.terminal), (el) => el.child(h_flex().flex_none().gap(1).p(1).rounded(5).border_1().border_color(t.border)
+        .children([["terminal", "Terminal"], ["chat", "Chat"], ["both", "Both"]].map(([v, label]) =>
+          div().id(`ph-view-${v}-${pane}`).px(6).h(18).flex().items_center().rounded(4).text_size(11).text_color(t.muted).cursor_pointer()
+            .hover((s) => s.bg(t.hover).text_color(t.foreground))
+            .on_click((_e, cx) => { cx.stop_propagation(); run("agent.view", { terminal: p.terminal, view: v }); })
+            .child(label)))))
       .when(Boolean(this.hovered), (el) =>
         el
           .when(p.mod === "better-changes", (el) => el.child(this.FullFileButton()))

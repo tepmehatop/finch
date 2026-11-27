@@ -29,6 +29,19 @@ function shortcut(name) {
   }).join(" ");
 }
 
+// Finch: how agents open (terminal, chat or both), shared with Finch's own + menu.
+function finchViewRow(t, cx) {
+  const view = shared("finch.agentView") ?? (shared("finch.chatWithAgents") === false ? "terminal" : "both");
+  return h_flex().h(29).px(9).gap(6).items_center()
+    .child(div().flex_1().text_size(12).text_color(t.muted).child(L("Open agents as", "Открывать агента")))
+    .children([["terminal", L("Terminal", "Терминал")], ["chat", L("Chat", "Чат")], ["both", L("Both", "Оба")]].map(([v, label]) =>
+      div().id(`pa-view-${v}`).px(7).py(2).rounded(5).text_size(11.5).cursor_pointer()
+        .when(view === v, el => el.bg(t.selected).text_color(t.foreground))
+        .when(view !== v, el => el.text_color(t.dim).hover(s => s.text_color(t.foreground)))
+        .on_click((_e, cx) => { setShared("finch.agentView", v); cx.notify(); })
+        .child(label)));
+}
+
 export default class NewMenu extends View {
   init(_props, cx) {
     const machine = spaces().find(s => props()?.space ? s.id === props().space : s.active)?.machine;
@@ -94,6 +107,7 @@ export default class NewMenu extends View {
           .when(this.failed || this.agents.length === 0, el => el.child(div().px(8).py(8).text_size(12).text_color(t.dim)
             .child(this.failed ? L("Could not check installed agents", "Не удалось проверить агентов") : L("Checking installed agents…", "Проверяю установленных агентов…")))))
         .child(div().h(1).mx(4).my(5).flex_none().bg(t.border))
+        .child(finchViewRow(t))
         .child(this.projectRow("terminal", pxIcon("terminal"), L("Open terminal", "Открыть терминал"), () => newTerminal("tab", space?.id), shortcut("tab.new")))
         .child(this.projectRow("worktree", pxIcon("branch"), L("Create worktree…", "Создать worktree…"), worktree("new"), "", Boolean(space)))
         .child(this.projectRow("worktree-open", pxIcon("folder"), L("Open worktree…", "Открыть worktree…"), worktree("open"), "", Boolean(space))));
@@ -120,6 +134,7 @@ export default class NewMenu extends View {
         .children(choices.map((a, i) => this.row(a.key, a.tint ? svg(a.icon).size(14).text_color(t.foreground) : image(a.icon).size(14), a.name,
           () => newTerminal("tab", space?.id, a.run, a.name), a.installed ? (i < 9 ? String(i + 1) : "") : L("not installed", "не установлен"), a.installed)))
         .when(this.failed || this.agents.length === 0, el => el.child(div().px(9).py(6).text_color(t.dim).child(this.failed ? L("Could not check installed agents", "Не удалось проверить агентов") : L("Checking installed agents…", "Проверяю установленных агентов…")))))
+      .child(finchViewRow(t))
       .child(div().h(1).mx(4).my(5).bg(t.border))
       .child(this.row("space", (agency() ? svg(px("plus")).size(15) : div().w(14).child("+")), L("New space", "Новое пространство"), () => run("space.new"), shortcut("space.new")))
       .child(this.row("worktree", svg(agency() ? px("branch") : "mods/workspace-chrome/branch.svg").size(agency() ? 15 : 14), L("Create worktree…", "Создать worktree…"), () => openOverlay({ mod: "worktree", kind: "dialog", width: 460, height: 280, props: { space: space?.id, folder: props()?.space ? workspace(space?.id).cwd : panes().find(p => p.focused)?.cwd, action: "new" } }), "", Boolean(space)))

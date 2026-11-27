@@ -190,10 +190,10 @@
                       }
                     },
                     {
-                      "id": "git-graph",
+                      "id": "review",
                       "type": "block",
                       "content": {
-                        "mod": "git-graph"
+                        "mod": "review"
                       }
                     },
                     {
@@ -204,24 +204,17 @@
                       }
                     },
                     {
+                      "id": "git-graph",
+                      "type": "block",
+                      "content": {
+                        "mod": "git-graph"
+                      }
+                    },
+                    {
                       "id": "skillsgate",
                       "type": "block",
                       "content": {
                         "mod": "skillsgate"
-                      }
-                    },
-                    {
-                      "id": "prompts",
-                      "type": "block",
-                      "content": {
-                        "mod": "prompts"
-                      }
-                    },
-                    {
-                      "id": "review",
-                      "type": "block",
-                      "content": {
-                        "mod": "review"
                       }
                     },
                     {
@@ -236,6 +229,33 @@
                       "type": "block",
                       "content": {
                         "mod": "jira"
+                      }
+                    },
+                    {
+                      "id": "prompts",
+                      "type": "block",
+                      "content": {
+                        "mod": "prompts"
+                      }
+                    },
+                    {
+                      "id": "github",
+                      "type": "block",
+                      "content": {
+                        "mod": "prodsovet",
+                        "props": {
+                          "role": "github"
+                        }
+                      }
+                    },
+                    {
+                      "id": "issues",
+                      "type": "block",
+                      "content": {
+                        "mod": "prodsovet",
+                        "props": {
+                          "role": "issues"
+                        }
                       }
                     }
                   ]

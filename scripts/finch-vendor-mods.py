@@ -107,7 +107,8 @@ def strip_network_panels(layout_path: pathlib.Path, mods: set[str]):
     if not any((f.get("content") or {}).get("mod") == "retry" for f in node.get("floating", [])):
         node.setdefault("floating", []).append({"id": "retry", "content": {"mod": "retry"}, "edge": "bottom", "align": "end"})
     # Finch: Finch's panels join the layout's side panel.
-    FINCH_PANEL_IDS = ["review", "asks", "git-graph", "skillsgate", "mcp", "jira", "prompts"]
+    FINCH_PANEL_IDS = ["review", "asks", "git-graph", "skillsgate", "mcp", "jira", "prompts", "github", "issues"]
+    ROLE_PANELS = {"github": {"mod": "prodsovet", "props": {"role": "github"}}, "issues": {"mod": "prodsovet", "props": {"role": "issues"}}}
     def find_id(n, i):
         if n.get("id") == i:
             return n
@@ -118,7 +119,9 @@ def strip_network_panels(layout_path: pathlib.Path, mods: set[str]):
     body = find_id(node, "panel-body")
     if body is not None:
         have = {c.get("id") for c in body.get("children", [])}
-        body["children"] += [{"id": i, "type": "block", "content": {"mod": i}} for i in FINCH_PANEL_IDS if i not in have]
+        body["children"] += [{"id": i, "type": "block", "content": ROLE_PANELS.get(i, {"mod": i})} for i in FINCH_PANEL_IDS if i not in have]
+        order = ["files", "changes"] + FINCH_PANEL_IDS
+        body["children"].sort(key=lambda c: order.index(c.get("id")) if c.get("id") in order else len(order))
     tabs = find_id(node, "tabs")
     props = ((tabs or {}).get("content") or {}).get("props") or {}
     if isinstance(props.get("buttons"), list):
@@ -127,9 +130,11 @@ def strip_network_panels(layout_path: pathlib.Path, mods: set[str]):
         labels = {"review": "Review", "asks": "Questions", "git-graph": "Git graph", "skillsgate": "Skills", "mcp": "MCP", "jira": "Jira", "prompts": "Prompts"}
         targets = {c.get("id") for c in body.get("children", [])} if body else set()
         props["buttons"] = [b for b in props["buttons"] if ((b.get("action") or {}).get("target") in targets) or (b.get("action") or {}).get("type") != "panel"]
-        have = {b.get("id") for b in props["buttons"]}
-        props["buttons"] += [{"id": i, "label": labels[i], "icon": icons[i], "group": "panels",
-                              "action": {"type": "panel", "container": "panel", "stack": "panel-body", "target": i}} for i in FINCH_PANEL_IDS if i not in have]
+        props["buttons"] = [b for b in props["buttons"] if b.get("id") not in FINCH_PANEL_IDS and b.get("id") != "more"]
+        props["buttons"] += [{"id": "review", "label": labels["review"], "icon": icons["review"], "group": "panels",
+                              "action": {"type": "panel", "container": "panel", "stack": "panel-body", "target": "review"}},
+                             {"id": "more", "label": "More", "icon": "frame/palette/command.svg", "group": "panels",
+                              "action": {"type": "command", "name": "mod.open", "args": {"name": "panels-menu"}}}]
     # Finch: PA layouts start in Finch's palette; their own themes stay in Settings > Look.
     if layout_path.name in ("PA-Advanced.json", "PA-Light.json"):
         node["theme"] = {"light": "paper", "dark": "graphite"}
@@ -178,8 +183,11 @@ PATCHES = {
         ('  if (place === "tab") run("tab.new", { ...(w.space ? { space: w.space } : {}), ...(w.cwd ? { folder: w.cwd } : {}), ...(argv ? { argv } : {}), ...(name ? { name } : {}) });', '  // Finch: agents the chat reads open with their chat beside them (the + menu\'s switch).\n  const chat = Boolean(argv) && shared("finch.chatWithAgents") !== false && /(^|\\/)(claude|gigacode|qwen)$/.test(argv[0] ?? "");\n  if (place === "tab") run("tab.new", { ...(w.space ? { space: w.space } : {}), ...(w.cwd ? { folder: w.cwd } : {}), ...(argv ? { argv } : {}), ...(name ? { name } : {}), ...(chat ? { chat: true } : {}) });'),
     ],
     "prodsovet/file-tabs.js": [
+        ('layout, settings, terminals } from "finch";', 'layout, settings, terminals, finch } from "finch";'),
         ('      .when(enabled.includes("issues"), el => el.child(panelButton("issues", L("Issues", "Задачи"), "mods/prodsovet/art/px/issue.svg")))', '      .when(enabled.includes("issues"), el => el.child(panelButton("issues", L("Issues", "Задачи"), "mods/prodsovet/art/px/issue.svg")))\n      // Finch: Finch\'s panels (review, MCP, Jira, prompts...) behind More; the one shown keeps its button.\n      .when(FINCH_PANELS.some(([id]) => finchPanel(id)), el => {\n        const shownId = panel && !panel.hidden ? body?.active : null;\n        const current = FINCH_PANELS.find(([id]) => id === shownId && finchPanel(id));\n        const list = FINCH_PANELS.filter(([id]) => finchPanel(id));\n        return el.when(Boolean(current), e => e.child(panelButton(current[0], L(current[1], current[3]), current[2])))\n          .child(h_flex().id("panel-more").h(metric("tabs.button")).px(8).gap(4).flex_none().items_center().rounded(radius(6))\n            .text_size(fontSize("tabs.action")).text_color(t.muted).hover(s => s.bg(t.hover)).on_mouse_down("left", stop)\n            .on_click(() => openOverlay({ mod: "panels-menu", kind: "popup", width: 220, height: 40 + 31 * list.length, props: { panels: list.map(([id, en, icon]) => [id, en, icon]) } }))\n            .child(L("More", "Ещё")).child(div().text_size(10).child("▾")));\n      })'),
-        ("function find(node, id) {", '// Finch: its own panels, added to this layout\'s side panel: [id, English, icon, Russian].\nconst FINCH_PANELS = [\n  ["review", "Review", "mods/changes/changes.svg", "Ревью"],\n  ["asks", "Questions", "frame/welcome/messages.svg", "Вопросы"],\n  ["git-graph", "Git graph", "mods/workspace-chrome/branch.svg", "Граф Git"],\n  ["skillsgate", "Skills", "frame/welcome/layers.svg", "Навыки"],\n  ["mcp", "MCP", "frame/welcome/layers.svg", "MCP"],\n  ["jira", "Jira", "mods/workspace-chrome/branch.svg", "Jira"],\n  ["prompts", "Prompts", "frame/palette/command.svg", "Промпты"],\n];\nconst finchPanel = (id) => (shared("finch.mods") ?? {})[id] !== false && Boolean(find(layout(), id));\n\nfunction find(node, id) {'),
+        ("function find(node, id) {", '// Finch: the side panels behind More, the same in every layout: [id, English, icon, Russian].\nconst FINCH_PANELS = [\n  ["asks", "Questions", "frame/welcome/messages.svg", "Вопросы"],\n  ["git-graph", "Git graph", "mods/workspace-chrome/branch.svg", "Граф Git"],\n  ["skillsgate", "Skills", "frame/welcome/layers.svg", "Навыки"],\n  ["mcp", "MCP", "frame/welcome/layers.svg", "MCP"],\n  ["jira", "Jira", "mods/workspace-chrome/branch.svg", "Jira"],\n  ["prompts", "Prompts", "frame/palette/command.svg", "Промпты"],\n  ["github", "GitHub", "mods/workspace-chrome/branch.svg", "GitHub"],\n  ["issues", "Issues", "frame/welcome/messages.svg", "Задачи"],\n];\n// GitHub and Issues don\'t exist in the closed edition.\nconst finchPanel = (id) => (shared("finch.mods") ?? {})[id] !== false && !(finch()?.closed && (id === "github" || id === "issues")) && Boolean(find(layout(), id));\n\nfunction find(node, id) {'),
+        ('      .when(enabled.includes("github"), el => el.child(panelButton("github", "GitHub", icon("pr", "mods/workspace-chrome/branch.svg"))))\n      .when(enabled.includes("issues"), el => el.child(panelButton("issues", L("Issues", "Задачи"), "mods/prodsovet/art/px/issue.svg")))',
+         '      .when(finchPanel("review"), el => el.child(panelButton("review", L("Review", "Ревью"), "mods/changes/changes.svg")))'),
     ],
     "better-tabs/main.js": [
         ('  config() {\n    return { ...DEFAULTS, ...props() };\n  }', '  config() {\n    // Finch: buttons of shipped mods turned off in Settings > Mods are left out.\n    const off = shared("finch.mods") ?? {};\n    const c = { ...DEFAULTS, ...props() };\n    return { ...c, buttons: (c.buttons ?? []).filter((b) => off[b.id] !== false) };\n  }'),
@@ -190,6 +198,81 @@ PATCHES = {
         ('nextCommand, openOverlay } from "finch";', 'nextCommand, openOverlay, setLanguage } from "finch";'),
     ],
 }
+# Finch: Skills knows GigaCode, GigaCode QA, Qwen Code and the project's own
+# skill folders (.gigacode/skills, .qwen/skills, .claude/skills, .agents/skills
+# in the git root of the active space).
+SKILL_TOOLS = """  {
+    name: "gigacode",
+    displayName: "GigaCode",
+    shortCode: "GG",
+    dir: "${GIGACODE_HOME:-$HOME/.gigacode}/skills",
+    detect: ["${GIGACODE_HOME:-$HOME/.gigacode}"],
+    program: "gigacode",
+  },
+  {
+    name: "gigacode-project",
+    displayName: "GigaCode (project)",
+    shortCode: "GP",
+    dir: "${FINCH_PROJECT:-/finch-no-project}/.gigacode/skills",
+    detect: ["${FINCH_PROJECT:-/finch-no-project}/.gigacode"],
+    program: "gigacode",
+  },
+  {
+    name: "qwen-code",
+    displayName: "Qwen Code",
+    shortCode: "QW",
+    dir: "$HOME/.qwen/skills",
+    detect: ["$HOME/.qwen"],
+    program: "qwen",
+  },
+  {
+    name: "qwen-project",
+    displayName: "Qwen Code (project)",
+    shortCode: "QWP",
+    dir: "${FINCH_PROJECT:-/finch-no-project}/.qwen/skills",
+    detect: ["${FINCH_PROJECT:-/finch-no-project}/.qwen"],
+    program: "qwen",
+  },
+  {
+    name: "claude-project",
+    displayName: "Claude Code (project)",
+    shortCode: "CCP",
+    dir: "${FINCH_PROJECT:-/finch-no-project}/.claude/skills",
+    detect: ["${FINCH_PROJECT:-/finch-no-project}/.claude"],
+    program: "claude",
+  },
+  {
+    name: "agents-project",
+    displayName: "Project (.agents/skills)",
+    shortCode: "PR",
+    dir: "${FINCH_PROJECT:-/finch-no-project}/.agents/skills",
+    detect: ["${FINCH_PROJECT:-/finch-no-project}/.agents"],
+  },
+"""
+# Finch: Estro's pane header switches agents between terminal, chat and both too.
+PATCHES["better-changes/views/pane-header.js"] = [
+    ('import { h_flex } from "gpui-base";', 'import { h_flex } from "gpui-base";\n\n// Finch: agents whose conversation the chat mod reads.\nconst CHAT = new Set(["claude", "gigacode", "gigacode-qa", "qwen"]);'),
+    ('      .when(p.status === "done", (el) => el.child(div().size(7).flex_none().rounded(4).bg(t.done)))\n',
+     '      .when(p.status === "done", (el) => el.child(div().size(7).flex_none().rounded(4).bg(t.done)))\n'
+     '      // Finch: terminal, chat or both for agents the chat mod reads.\n'
+     '      .when(CHAT.has(p.program?.key) && Boolean(p.terminal), (el) => el.child(h_flex().flex_none().gap(1).p(1).rounded(5).border_1().border_color(t.border)\n'
+     '        .children([["terminal", "Terminal"], ["chat", "Chat"], ["both", "Both"]].map(([v, label]) =>\n'
+     '          div().id(`ph-view-${v}-${pane}`).px(6).h(18).flex().items_center().rounded(4).text_size(11).text_color(t.muted).cursor_pointer()\n'
+     '            .hover((s) => s.bg(t.hover).text_color(t.foreground))\n'
+     '            .on_click((_e, cx) => { cx.stop_propagation(); run("agent.view", { terminal: p.terminal, view: v }); })\n'
+     '            .child(label)))))\n'),
+]
+PATCHES["skillsgate/registry.js"] = [
+    ("export const TOOLS = [\n", "export const TOOLS = [\n" + SKILL_TOOLS),
+]
+PATCHES["skillsgate/scripts.js"] = [
+    ("export HOME\n", "export HOME\n# Finch: the project is the git root of the folder the scan runs in (not home).\nFINCH_PROJECT=$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)\nif [ \"$FINCH_PROJECT\" = \"$HOME\" ] || [ \"$FINCH_PROJECT\" = / ]; then FINCH_PROJECT=; fi\nexport FINCH_PROJECT\n"),
+]
+PATCHES["skillsgate/host.js"] = [
+    ("export const exec = adaptExec(hostExec);",
+     "// Finch: on this computer scripts run in the active space's folder, so a scan\n// also finds the project's own skills.\nconst projectFolder = () => (spaces() ?? []).find((s) => s.active)?.folder || undefined;\nexport const exec = adaptExec((program, args, options) => hostExec(program, args, options?.on ? options : { ...options, cwd: projectFolder() }));"),
+]
+
 for path in (DEFAULTS / "mods").rglob("*.js"):
     rel = path.relative_to(DEFAULTS / "mods").as_posix()
     for key, edits in PATCHES.items():
@@ -202,3 +285,56 @@ for path in (DEFAULTS / "mods").rglob("*.js"):
 shipped = BUILT_IN | set(MODS)
 for name in ["estro.json", "PA-Advanced.json", "PA-Light.json"]:
     strip_network_panels(DEFAULTS / "layouts" / name, shipped)
+
+# Finch, second pass: agent view switching (terminal / chat / both) in PA's own UI.
+VIEW_SWITCH = '''h_flex().flex_none().gap(1).p(1).rounded(5).border_1().border_color(t.border)
+        .children([["terminal", L("Terminal", "Терминал")], ["chat", L("Chat", "Чат")], ["both", L("Both", "Оба")]].map(([v, label]) =>
+          div().id(`ps-view-${v}-${pane}`).px(6).h(18).flex().items_center().rounded(4).text_size(11).text_color(t.muted).cursor_pointer()
+            .hover((s) => s.bg(t.hover).text_color(t.foreground))
+            .on_click((_e, cx) => { cx.stop_propagation(); run("agent.view", { terminal: p.terminal, view: v }); })
+            .child(label)))'''
+VIEW_ROW = '''// Finch: how agents open (terminal, chat or both), shared with Finch's own + menu.
+function finchViewRow(t, cx) {
+  const view = shared("finch.agentView") ?? (shared("finch.chatWithAgents") === false ? "terminal" : "both");
+  return h_flex().h(29).px(9).gap(6).items_center()
+    .child(div().flex_1().text_size(12).text_color(t.muted).child(L("Open agents as", "Открывать агента")))
+    .children([["terminal", L("Terminal", "Терминал")], ["chat", L("Chat", "Чат")], ["both", L("Both", "Оба")]].map(([v, label]) =>
+      div().id(`pa-view-${v}`).px(7).py(2).rounded(5).text_size(11.5).cursor_pointer()
+        .when(view === v, el => el.bg(t.selected).text_color(t.foreground))
+        .when(view !== v, el => el.text_color(t.dim).hover(s => s.text_color(t.foreground)))
+        .on_click((_e, cx) => { setShared("finch.agentView", v); cx.notify(); })
+        .child(label)));
+}
+
+export default class'''
+SECOND = [
+    ("prodsovet/main.js",
+     '''el.child(div().id(`ps-chat-${pane}`).flex_none().px(7).h(20).flex().items_center().rounded(5)
+        .border_1().border_color(t.border).text_size(11.5).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground))
+        .on_click((_e, cx) => { cx.stop_propagation(); run("agent.chat", { terminal: p.terminal }); })
+        .child("Chat")))''',
+     "el.child(" + VIEW_SWITCH + "))"),
+    ("prodsovet/main.js", '["claude", "gigacode", "qwen"].includes(p.program?.key)', '["claude", "gigacode", "gigacode-qa", "qwen"].includes(p.program?.key)'),
+    ("prodsovet/filesystem.js",
+     '''  const chat = Boolean(argv) && shared("finch.chatWithAgents") !== false && /(^|\\/)(claude|gigacode|qwen)$/.test(argv[0] ?? "");''',
+     '''  const view = shared("finch.agentView") ?? (shared("finch.chatWithAgents") === false ? "terminal" : "both");
+  const chat = Boolean(argv) && view !== "terminal" && /(^|\\/)(claude|gigacode|gigacode-qa|qwen)$/.test(argv[0] ?? "");'''),
+    ("prodsovet/filesystem.js", "...(chat ? { chat: true } : {}) });", "...(chat ? { view } : {}) });"),
+    ("prodsovet/file-new-menu.js", "export default class", VIEW_ROW),
+    ("prodsovet/file-new-menu.js",
+     '''        .child(this.projectRow("terminal", pxIcon("terminal"),''',
+     '''        .child(finchViewRow(t))
+        .child(this.projectRow("terminal", pxIcon("terminal"),'''),
+    ("prodsovet/file-new-menu.js",
+     '''      .child(div().h(1).mx(4).my(5).bg(t.border))
+      .child(this.row("space",''',
+     '''      .child(finchViewRow(t))
+      .child(div().h(1).mx(4).my(5).bg(t.border))
+      .child(this.row("space",'''),
+]
+for rel, old, new in SECOND:
+    path = DEFAULTS / "mods" / rel
+    text = path.read_text()
+    if old not in text:
+        sys.exit(f"finch-vendor-mods: second-pass patch not found in {rel}: {old[:60]!r}")
+    path.write_text(text.replace(old, new, 1))

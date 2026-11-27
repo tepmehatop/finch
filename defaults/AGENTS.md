@@ -645,7 +645,9 @@ The main ones:
   Terminals display Kitty graphics, including Unicode placeholder images used by
   programs such as yazi; partial images and scrolling follow the placeholder cells.
 - Agents: `agent.next`, `agent.prev`, `agent.select {index}`, `agent.focus {terminal}`.
-  Finch: `agent.chat {terminal?}` opens the `chat` mod beside an agent's terminal
+  Finch: `agent.view {terminal?, view}` shows an agent as its terminal, its chat or both
+  (view: terminal, chat, both, toggle; the terminal keeps running behind a chat).
+  `agent.chat {terminal?}` opens the `chat` mod beside an agent's terminal
   (Claude Code, GigaCode, Qwen Code): its session log as a formatted chat, with a
   composer that sends to the terminal. Keys: Cmd+Shift+J (macOS), Ctrl+Shift+J.
 - Layout: `layout.switch {name?}`, `layout.toggle {id}`, `layout.show {id}`, `layout.hide {id}`,

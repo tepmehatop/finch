@@ -140,26 +140,6 @@
                       }
                     },
                     {
-                      "id": "github",
-                      "type": "block",
-                      "content": {
-                        "mod": "prodsovet",
-                        "props": {
-                          "role": "github"
-                        }
-                      }
-                    },
-                    {
-                      "id": "issues",
-                      "type": "block",
-                      "content": {
-                        "mod": "prodsovet",
-                        "props": {
-                          "role": "issues"
-                        }
-                      }
-                    },
-                    {
                       "id": "review",
                       "type": "block",
                       "content": {
@@ -206,6 +186,26 @@
                       "type": "block",
                       "content": {
                         "mod": "prompts"
+                      }
+                    },
+                    {
+                      "id": "github",
+                      "type": "block",
+                      "content": {
+                        "mod": "prodsovet",
+                        "props": {
+                          "role": "github"
+                        }
+                      }
+                    },
+                    {
+                      "id": "issues",
+                      "type": "block",
+                      "content": {
+                        "mod": "prodsovet",
+                        "props": {
+                          "role": "issues"
+                        }
                       }
                     }
                   ],

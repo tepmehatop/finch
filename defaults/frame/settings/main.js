@@ -821,6 +821,18 @@ export default class Settings extends View {
 
   // Mods -----------------------------------------------------------------
 
+  // Finch: how agents open (shared with the + menus of every layout).
+  viewChoice(t) {
+    const view = shared("finch.agentView") ?? (shared("finch.chatWithAgents") === false ? "terminal" : "both");
+    return h_flex().flex_none().gap(2).p(2).rounded(7).border_1().border_color(t.border)
+      .children([["terminal", "Terminal"], ["chat", "Chat"], ["both", "Both"]].map(([v, label]) =>
+        div().id(`st-view-${v}`).px(10).py(4).rounded(5).text_size(12.5).cursor_pointer()
+          .bg(view === v ? t.selected : t.background).text_color(view === v ? t.foreground : t.muted)
+          .hover((s) => s.bg(t.hover))
+          .on_click((_e, cx) => { setShared("finch.agentView", v); cx.notify(); })
+          .child(label)));
+  }
+
   mods(t) {
     const state = shared("finch.mods") ?? {};
     const isOn = (x) => (x.id in state ? state[x.id] !== false : x.on);
@@ -839,6 +851,8 @@ export default class Settings extends View {
           h_flex().gap(8).items_center().flex_none()
             .when(Boolean(x.open) && isOn(x), (el) => el.child(this.button(t, `st-open-${x.id}`, "Open", () => { closeOverlay(props()?.overlay); run("mod.open", { name: x.open }); })))
             .child(this.toggle(t, `st-mod-${x.id}`, isOn(x), flip(x))))))
+      .child(this.row(t, "Open agents as", "How a new agent opens: its terminal, its chat, or both side by side. Each agent's header switches it any time; the terminal keeps running behind the chat.",
+        this.viewChoice(t)))
       .child(this.row(t, "Agents at once", "The most agents working at the same time; more started from the + menu wait in a queue. 0: no limit.",
         this.stepper(t, "st-limit", String(Number(shared("finch.limit") ?? 0)),
           (_e, cx) => { setShared("finch.limit", Math.max(0, Number(shared("finch.limit") ?? 0) - 1)); cx.notify(); },

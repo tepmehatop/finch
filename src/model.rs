@@ -491,6 +491,18 @@ impl Model {
     /// Zooms a pane, or unzooms it when it's the zoomed one. A tab with one
     /// pane doesn't zoom. Zooming focuses the pane: a zoomed tab never hides
     /// the pane that has the keyboard. Returns whether the pane is now zoomed.
+    /// Finch: zoom `pane_id` in its tab (None: unzoom the tab holding `pane_id`).
+    pub fn set_zoom(&mut self, pane_id: &str, zoom: bool) {
+        let Some(c) = self.tab_of_mut(pane_id) else { return };
+        if zoom && c.root.panes().len() > 1 {
+            c.zoomed = Some(pane_id.to_owned());
+            c.focus(pane_id);
+        } else {
+            c.zoomed = None;
+            c.focus(pane_id);
+        }
+    }
+
     pub fn toggle_zoom(&mut self, pane_id: &str) -> bool {
         let Some(c) = self.tab_of_mut(pane_id) else { return false };
         if c.root.panes().len() < 2 {

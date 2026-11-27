@@ -25,7 +25,7 @@ function paneFrame(node) {
 }
 
 // Finch: programs the chat mod can read (mods/chat/main.js).
-const CHAT = new Set(["claude", "gigacode", "qwen"]);
+const CHAT = new Set(["claude", "gigacode", "gigacode-qa", "qwen"]);
 
 function icon(p, size, color) {
   if (!p?.icon) return null;
@@ -87,12 +87,13 @@ export default class Pane extends View {
       .when(st === "working", el => el.child(svg("mods/workspace-chrome/spinner.svg").size(12).flex_none().text_color(t.working).spin(900)))
       .when(st === "blocked", el => el.child(div().flex_none().px(6).h(18).flex().items_center().rounded(5).bg(t.blocked + "26").text_size(10.5).font_semibold().text_color(t.blocked).child("Needs you")))
       .when(st === "done", el => el.child(div().size(7).flex_none().rounded(4).bg(t.done)))
-      // Finch: agents whose conversation the chat mod reads get a Chat toggle.
-      .when(CHAT.has(p.program?.key) && Boolean(p.terminal), el => el.child(div().id(`ph-chat-${pane}`).flex_none().px(7).h(20).flex().items_center().gap(4).rounded(5)
-        .border_1().border_color(t.border).text_size(11.5).text_color(t.muted).cursor_pointer()
-        .hover((s) => s.bg(t.hover).text_color(t.foreground))
-        .on_click((_e, cx) => { cx.stop_propagation(); run("agent.chat", { terminal: p.terminal }); })
-        .child("Chat")))
+      // Finch: agents whose conversation the chat mod reads switch between terminal, chat and both.
+      .when(CHAT.has(p.program?.key) && Boolean(p.terminal), el => el.child(h_flex().flex_none().gap(1).p(1).rounded(5).border_1().border_color(t.border)
+        .children([["terminal", "Terminal"], ["chat", "Chat"], ["both", "Both"]].map(([v, label]) =>
+          div().id(`ph-view-${v}-${pane}`).px(6).h(18).flex().items_center().rounded(4).text_size(11).text_color(t.muted).cursor_pointer()
+            .hover((s) => s.bg(t.hover).text_color(t.foreground))
+            .on_click((_e, cx) => { cx.stop_propagation(); run("agent.view", { terminal: p.terminal, view: v }); })
+            .child(label)))))
       .when(this.hovered, el => el
         .child(this.button(t, `ph-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }))
         .child(this.button(t, `ph-d-${pane}`, "split-down", "pane.split", { direction: "down", pane }))

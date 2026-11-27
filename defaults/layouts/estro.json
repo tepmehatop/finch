@@ -113,75 +113,16 @@
                       }
                     },
                     {
-                      "id": "asks",
-                      "label": "Questions",
-                      "icon": "frame/welcome/messages.svg",
-                      "group": "panels",
-                      "action": {
-                        "type": "panel",
-                        "container": "panel",
-                        "stack": "panel-body",
-                        "target": "asks"
-                      }
-                    },
-                    {
-                      "id": "git-graph",
-                      "label": "Git graph",
-                      "icon": "mods/workspace-chrome/branch.svg",
-                      "group": "panels",
-                      "action": {
-                        "type": "panel",
-                        "container": "panel",
-                        "stack": "panel-body",
-                        "target": "git-graph"
-                      }
-                    },
-                    {
-                      "id": "skillsgate",
-                      "label": "Skills",
-                      "icon": "frame/welcome/layers.svg",
-                      "group": "panels",
-                      "action": {
-                        "type": "panel",
-                        "container": "panel",
-                        "stack": "panel-body",
-                        "target": "skillsgate"
-                      }
-                    },
-                    {
-                      "id": "mcp",
-                      "label": "MCP",
-                      "icon": "frame/welcome/layers.svg",
-                      "group": "panels",
-                      "action": {
-                        "type": "panel",
-                        "container": "panel",
-                        "stack": "panel-body",
-                        "target": "mcp"
-                      }
-                    },
-                    {
-                      "id": "jira",
-                      "label": "Jira",
-                      "icon": "mods/workspace-chrome/branch.svg",
-                      "group": "panels",
-                      "action": {
-                        "type": "panel",
-                        "container": "panel",
-                        "stack": "panel-body",
-                        "target": "jira"
-                      }
-                    },
-                    {
-                      "id": "prompts",
-                      "label": "Prompts",
+                      "id": "more",
+                      "label": "More",
                       "icon": "frame/palette/command.svg",
                       "group": "panels",
                       "action": {
-                        "type": "panel",
-                        "container": "panel",
-                        "stack": "panel-body",
-                        "target": "prompts"
+                        "type": "command",
+                        "name": "mod.open",
+                        "args": {
+                          "name": "panels-menu"
+                        }
                       }
                     }
                   ]
@@ -309,6 +250,26 @@
                       "type": "block",
                       "content": {
                         "mod": "prompts"
+                      }
+                    },
+                    {
+                      "id": "github",
+                      "type": "block",
+                      "content": {
+                        "mod": "prodsovet",
+                        "props": {
+                          "role": "github"
+                        }
+                      }
+                    },
+                    {
+                      "id": "issues",
+                      "type": "block",
+                      "content": {
+                        "mod": "prodsovet",
+                        "props": {
+                          "role": "issues"
+                        }
                       }
                     }
                   ],

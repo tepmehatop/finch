@@ -10,6 +10,53 @@ export const UNIVERSAL = "universal";
 
 export const TOOLS = [
   {
+    name: "gigacode",
+    displayName: "GigaCode",
+    shortCode: "GG",
+    dir: "${GIGACODE_HOME:-$HOME/.gigacode}/skills",
+    detect: ["${GIGACODE_HOME:-$HOME/.gigacode}"],
+    program: "gigacode",
+  },
+  {
+    name: "gigacode-project",
+    displayName: "GigaCode (project)",
+    shortCode: "GP",
+    dir: "${FINCH_PROJECT:-/finch-no-project}/.gigacode/skills",
+    detect: ["${FINCH_PROJECT:-/finch-no-project}/.gigacode"],
+    program: "gigacode",
+  },
+  {
+    name: "qwen-code",
+    displayName: "Qwen Code",
+    shortCode: "QW",
+    dir: "$HOME/.qwen/skills",
+    detect: ["$HOME/.qwen"],
+    program: "qwen",
+  },
+  {
+    name: "qwen-project",
+    displayName: "Qwen Code (project)",
+    shortCode: "QWP",
+    dir: "${FINCH_PROJECT:-/finch-no-project}/.qwen/skills",
+    detect: ["${FINCH_PROJECT:-/finch-no-project}/.qwen"],
+    program: "qwen",
+  },
+  {
+    name: "claude-project",
+    displayName: "Claude Code (project)",
+    shortCode: "CCP",
+    dir: "${FINCH_PROJECT:-/finch-no-project}/.claude/skills",
+    detect: ["${FINCH_PROJECT:-/finch-no-project}/.claude"],
+    program: "claude",
+  },
+  {
+    name: "agents-project",
+    displayName: "Project (.agents/skills)",
+    shortCode: "PR",
+    dir: "${FINCH_PROJECT:-/finch-no-project}/.agents/skills",
+    detect: ["${FINCH_PROJECT:-/finch-no-project}/.agents"],
+  },
+  {
     name: "claude-code",
     displayName: "Claude Code",
     shortCode: "CC",

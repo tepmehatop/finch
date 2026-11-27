@@ -2,6 +2,7 @@
   "shells": ["zsh","bash","fish","sh","dash","nu","pwsh","powershell","cmd","elvish","xonsh","tcsh","csh","ksh","ion"],
   "interpreters": ["node","bun","bunx","deno","python","python3","npx","pnpm","yarn","uv","uvx","ruby","bundle","env","sudo","nice","time","watch","nodemon"],
   "programs": {
+    "gigacode-qa": {"name":"GigaCode QA","icon":"icons/gigacode.svg","run":["gigacode-qa"],"tint":true,"tile":"#2b1d0b","color":"#f5a623"},
     "gigacode": {"name":"GigaCode","icon":"icons/gigacode.svg","run":["gigacode"],"match":["gigacode-cli","gcli"],"tint":true,"tile":"#0f2a1d","color":"#21a038"},
     "agent": {"name":"Agent","icon":"icons/agent.svg","tint":true,"tile":"#1c1d21","color":"#d6d8db"},
     "shell": {"name":"Shell","icon":"icons/shell.svg","tint":true,"tile":"#16241a","color":"#4ec95f"},

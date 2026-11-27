@@ -50,3 +50,22 @@ test("broken lines are skipped, not fatal", () => {
   expect(blocks.length).toBe(1);
   expect(blocks[0].off).toBe(Buffer.byteLength("{not json") + 1);
 });
+
+import { decodeJson } from "../defaults/mods/chat/decode.js";
+
+test("older forks' JSON sessions decode too, with the model", () => {
+  const doc = { messages: [
+    { type: "user", content: "Запусти тесты" },
+    { type: "gemini", model: "GigaChat-2-Max", content: "Запускаю", thoughts: [{ subject: "План", description: "сначала npm test" }],
+      toolCalls: [{ id: "1", name: "run_shell_command", args: { command: "npm test" }, status: "success", result: [{ functionResponse: { response: { output: "3 passed" } } }] }] },
+  ] };
+  const blocks = decodeJson(JSON.stringify(doc));
+  expect(blocks.map((b) => b.kind)).toEqual(["user", "meta", "thinking", "assistant", "tool"]);
+  expect(blocks[1].model).toBe("GigaChat-2-Max");
+  expect(blocks[4].result).toBe("3 passed");
+});
+
+test("Qwen-format records carry the model as meta", () => {
+  const blocks = decodeLines("gigacode", [JSON.stringify({ type: "assistant", model: "GigaChat-2", message: { parts: [{ text: "ok" }] } })], 0);
+  expect(blocks.map((b) => b.kind)).toEqual(["meta", "assistant"]);
+});

@@ -29,6 +29,10 @@ US=$(printf '\\037')
 HOME=$(cd -P -- "$HOME" && pwd -P) || { printf 'Home folder not found\\n' >&2; exit 1; }
 case "$HOME" in *"$RS"*|*"$US"*) printf 'Home folder not usable\\n' >&2; exit 1 ;; esac
 export HOME
+# Finch: the project is the git root of the folder the scan runs in (not home).
+FINCH_PROJECT=$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)
+if [ "$FINCH_PROJECT" = "$HOME" ] || [ "$FINCH_PROJECT" = / ]; then FINCH_PROJECT=; fi
+export FINCH_PROJECT
 PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 
 # emit_entry <tool> <entry path> <link 1|0>: one S record for a folder holding SKILL.md

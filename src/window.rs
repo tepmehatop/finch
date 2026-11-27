@@ -2809,6 +2809,31 @@ impl AppWindow {
     }
 
     /// A mod as a pane beside the target (a viewer next to the shell).
+    /// Finch: the agent terminal a view command means: `terminal`, else the focused
+    /// pane's terminal, else (a chat pane focused) the terminal that chat shows.
+    fn view_terminal(&self, a: &Value) -> Option<String> {
+        if let Some(t) = Self::owned(a, "terminal") {
+            return Some(t);
+        }
+        let focused = self.model.focused_pane()?;
+        if let Some(t) = self.model.address_of(&focused) {
+            return Some(t);
+        }
+        let tab = self.model.tab_of(&focused)?;
+        let node = tab.root.find(&focused)?;
+        match node.content() {
+            Some(crate::layout::Content::Mod { name, props }) if name == "chat" => props["terminal"].as_str().map(str::to_owned),
+            _ => None,
+        }
+    }
+
+    /// Finch: the chat pane showing `terminal`, if one is open.
+    fn chat_pane_of(&self, terminal: &str) -> Option<String> {
+        self.model.tabs().flat_map(|c| c.root.panes()).find(|n| {
+            matches!(n.content(), Some(crate::layout::Content::Mod { name, props }) if name == "chat" && props["terminal"].as_str() == Some(terminal))
+        }).map(|n| n.id.clone())
+    }
+
     fn split_mod(&mut self, pane: Option<String>, axis: Axis, name: String, props: Value) -> Result<Value, String> {
         let target = pane.or_else(|| self.model.focused_pane()).ok_or("no pane to split")?;
         if self.model.tab_of(&target).is_none() {
@@ -3262,14 +3287,14 @@ impl AppWindow {
                     }
                     None => self.new_tab(Self::owned(a, "space"), name, Self::owned(a, "folder"), Self::argv(a), Self::arg(a, "task"), focus, window),
                 };
-                // Finch: `chat: true` shows the new agent's conversation beside it.
-                if a.get("chat").and_then(Value::as_bool) == Some(true)
+                // Finch: `view` ("both", "chat"; `chat: true` is "both") shows the new agent that way.
+                let view = Self::arg(a, "view").map(str::to_owned).or_else(|| (a.get("chat").and_then(Value::as_bool) == Some(true)).then(|| "both".to_owned()));
+                if let Some(view) = view.filter(|v| v != "terminal")
                     && let Some(t) = r.as_ref().ok().and_then(|v| v["terminal"].as_str()).map(str::to_owned)
                 {
                     let made = r.clone();
-                    self.dispatch("agent.chat", &json!({ "terminal": t }), person, window, cx);
-                    // The chat goes beside; the agent's terminal keeps the keyboard.
-                    if let Some(p) = self.model.pane_of(&t) {
+                    self.dispatch("agent.view", &json!({ "terminal": t, "view": view }), person, window, cx);
+                    if view == "both" && let Some(p) = self.model.pane_of(&t) {
                         self.model.focus_pane(&p);
                     }
                     self.answer(made);
@@ -3357,22 +3382,50 @@ impl AppWindow {
             }
             // Finch: the agent's conversation as a chat, beside its terminal.
             "agent.chat" => {
-                let focused = self.model.focused_pane();
-                let terminal = Self::owned(a, "terminal").or_else(|| focused.as_deref().and_then(|p| self.model.address_of(p)));
-                let Some(terminal) = terminal else { return self.fail("no terminal to show as a chat") };
-                // Again for the same terminal: close its chat (a toggle, like the header button).
-                let open = self.model.tabs().flat_map(|c| c.root.panes()).find(|n| {
-                    matches!(n.content(), Some(crate::layout::Content::Mod { name, props }) if name == "chat" && props["terminal"].as_str() == Some(terminal.as_str()))
-                }).map(|n| n.id.clone());
-                if let Some(chat) = open {
-                    return self.dispatch("pane.close", &json!({ "pane": chat }), person, window, cx);
+                let view = if self.chat_pane_of(&self.view_terminal(a).unwrap_or_default()).is_some() { "terminal-only" } else { "both" };
+                let mut args = a.clone();
+                args["view"] = json!(view);
+                return self.dispatch("agent.view", &args, person, window, cx);
+            }
+            // Finch: show an agent as its terminal, its chat, or both; the terminal keeps running.
+            "agent.view" => {
+                let Some(terminal) = self.view_terminal(a) else { return self.fail("no agent terminal here") };
+                let Some(term_pane) = self.model.pane_of(&terminal) else { return self.fail("the agent's terminal is closed") };
+                let mut chat = self.chat_pane_of(&terminal);
+                let view = match Self::arg(a, "view").unwrap_or("toggle") {
+                    "toggle" => match self.model.tab_of(&term_pane).and_then(|c| c.zoomed.clone()) {
+                        Some(z) if Some(&z) == chat.as_ref() => "terminal",
+                        _ => "chat",
+                    },
+                    v => v,
                 }
-                let beside = self.model.pane_of(&terminal).or(focused);
-                let r = self.split_mod(beside, Axis::Row, "chat".into(), json!({ "terminal": terminal }));
-                if let Some(pane) = r.as_ref().ok().and_then(|v| v["pane"].as_str()).map(str::to_owned) {
-                    self.dispatch("pane.rename", &json!({ "pane": pane, "name": "Agent chat" }), person, window, cx);
+                .to_owned();
+                if view == "terminal" || view == "terminal-only" {
+                    // The chat goes away (nothing of it stays in memory); the terminal stays.
+                    if let Some(c) = chat {
+                        self.dispatch("pane.close", &json!({ "pane": c }), person, window, cx);
+                    }
+                    self.model.set_zoom(&term_pane, false);
+                    return;
                 }
-                self.answer(r);
+                if chat.is_none() {
+                    match self.split_mod(Some(term_pane.clone()), Axis::Row, "chat".into(), json!({ "terminal": terminal })) {
+                        Ok(v) => {
+                            chat = v["pane"].as_str().map(str::to_owned);
+                            if let Some(p) = &chat {
+                                self.dispatch("pane.rename", &json!({ "pane": p, "name": "Agent chat" }), person, window, cx);
+                            }
+                        }
+                        Err(e) => return self.fail(e),
+                    }
+                }
+                match view.as_str() {
+                    "chat" => self.model.set_zoom(chat.as_deref().unwrap_or(&term_pane), true),
+                    _ => {
+                        self.model.set_zoom(&term_pane, false);
+                    }
+                }
+                self.answer(Ok(json!({ "terminal": terminal, "chat": chat, "view": view })));
             }
             "pane.close" => {
                 let Some(pane) = Self::owned(a, "pane").or_else(|| self.model.focused_pane()) else { return self.fail("no pane to close") };

@@ -135,10 +135,12 @@ class PaneHead {
         .when(st === "blocked", (e) => e.loop("opacity", { from: 0.3, to: 1, period: 700 }))
         .child(word(st))))
       // Finch: agents whose conversation the chat mod reads get a Chat toggle.
-      .when(["claude", "gigacode", "qwen"].includes(p.program?.key) && Boolean(p.terminal), (el) => el.child(div().id(`ps-chat-${pane}`).flex_none().px(7).h(20).flex().items_center().rounded(5)
-        .border_1().border_color(t.border).text_size(11.5).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground))
-        .on_click((_e, cx) => { cx.stop_propagation(); run("agent.chat", { terminal: p.terminal }); })
-        .child("Chat")))
+      .when(["claude", "gigacode", "gigacode-qa", "qwen"].includes(p.program?.key) && Boolean(p.terminal), (el) => el.child(h_flex().flex_none().gap(1).p(1).rounded(5).border_1().border_color(t.border)
+        .children([["terminal", L("Terminal", "Терминал")], ["chat", L("Chat", "Чат")], ["both", L("Both", "Оба")]].map(([v, label]) =>
+          div().id(`ps-view-${v}-${pane}`).px(6).h(18).flex().items_center().rounded(4).text_size(11).text_color(t.muted).cursor_pointer()
+            .hover((s) => s.bg(t.hover).text_color(t.foreground))
+            .on_click((_e, cx) => { cx.stop_propagation(); run("agent.view", { terminal: p.terminal, view: v }); })
+            .child(label)))))
       .when(this.hovered, (el) => el
         .child(this.button(t, `ps-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }))
         .child(this.button(t, `ps-d-${pane}`, "split-down", "pane.split", { direction: "down", pane }))

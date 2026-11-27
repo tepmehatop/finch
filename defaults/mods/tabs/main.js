@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, ScrollHandle } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings } from "finch";
+import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings, finch } from "finch";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -28,14 +28,19 @@ function label(tab, lead) {
 }
 
 // Finch: shipped panels opened from the tab bar's More menu: [layout id, label, icon].
+// The same list, in the same order, as panels-menu and the other layouts.
 const MORE = [
-  ["git-graph", "Git graph", "mods/workspace-chrome/branch.svg"],
   ["asks", "Questions", "frame/welcome/messages.svg"],
+  ["git-graph", "Git graph", "mods/workspace-chrome/branch.svg"],
   ["skillsgate", "Skills", "frame/welcome/layers.svg"],
   ["mcp", "MCP", "frame/welcome/layers.svg"],
   ["jira", "Jira", "mods/workspace-chrome/branch.svg"],
   ["prompts", "Prompts", "frame/palette/command.svg"],
+  ["github", "GitHub", "mods/workspace-chrome/branch.svg"],
+  ["issues", "Issues", "frame/welcome/messages.svg"],
 ];
+// GitHub and Issues don't exist in the closed edition.
+const NETWORK = new Set(["github", "issues"]);
 
 export default class Tabs extends View {
   init() {
@@ -141,7 +146,7 @@ export default class Tabs extends View {
     const panel = find(root, "panel"), body = find(root, "panel-body");
     const enabled = shared("workspace.panels") ?? ["files", "changes"];
     // Finch: Settings > Mods turns the shipped extras on and off; on unless turned off.
-    const extra = (id) => (shared("finch.mods") ?? {})[id] !== false && Boolean(find(root, id));
+    const extra = (id) => (shared("finch.mods") ?? {})[id] !== false && !(finch()?.closed && NETWORK.has(id)) && Boolean(find(root, id));
     this.syncPanel(space, panel, body, enabled);
     const panelButton = (id, label, icon) => {
       const on = panel && !panel.hidden && body?.active === id;
@@ -172,7 +177,7 @@ export default class Tabs extends View {
         return el.when(Boolean(current), e => e.child(panelButton(current[0], current[1], current[2])))
           .child(h_flex().id("panel-more").h(26).px(8).gap(4).flex_none().items_center().rounded(6).text_size(12).text_color(t.muted)
             .hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
-            .on_click(() => openOverlay({ mod: "panels-menu", kind: "popup", width: 220, height: 40 + 31 * MORE.filter(([id]) => extra(id)).length, props: { panels: MORE.filter(([id]) => extra(id)) } }))
+            .on_click(() => openOverlay({ mod: "panels-menu", kind: "popup", width: 220, height: 40 + 31 * MORE.filter(([id]) => extra(id)).length, props: {} }))
             .child("More").child(div().text_size(10).child("▾")));
       })
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))

@@ -11,7 +11,7 @@ use crate::terminals::Terminal;
 use ghostty_vt::StatusReport;
 
 /// The apps this applies to, by the program's name or a word in its command.
-const APPS: &[(&str, &str)] = &[("gigacode", "gigacode"), ("gcli", "gigacode"), ("qwen", "qwen")];
+const APPS: &[(&str, &str)] = &[("gigacode-qa", "gigacode-qa"), ("gigacode", "gigacode"), ("gcli", "gigacode"), ("qwen", "qwen")];
 
 /// Which title-reporting app runs in `t` now, if any.
 fn app(t: &Terminal) -> Option<&'static str> {
@@ -64,6 +64,65 @@ pub fn infer(t: &Terminal, title: &str) -> Option<StatusReport> {
     })
 }
 
+/// When the screen was last looked at, per terminal: at most once a second.
+static LOOKED: std::sync::Mutex<Option<std::collections::HashMap<u32, u64>>> = std::sync::Mutex::new(None);
+
+/// Whether it's time to read terminal `id`'s screen again.
+pub fn due(id: u32, now_ms: u64) -> bool {
+    let mut map = LOOKED.lock().unwrap();
+    let map = map.get_or_insert_with(Default::default);
+    if map.get(&id).is_some_and(|at| now_ms.saturating_sub(*at) < 1000) {
+        return false;
+    }
+    map.insert(id, now_ms);
+    true
+}
+
+/// The status the visible screen of a Qwen Code / GigaCode CLI terminal shows,
+/// for versions whose title has no glyphs: a confirmation dialog is "blocked",
+/// "esc to cancel" is "working", anything else "idle" (or "done" after working).
+/// Also how such an agent first appears in the lists: as "idle".
+pub fn infer_screen(t: &Terminal, rows: &[String]) -> Option<StatusReport> {
+    let app = app(t)?;
+    if let Some(s) = &t.status
+        && !s.app.is_empty()
+        && s.app != app
+    {
+        return None;
+    }
+    let tail: Vec<String> = rows.iter().map(|r| r.trim().to_lowercase()).filter(|r| !r.is_empty()).collect();
+    let tail = &tail[tail.len().saturating_sub(20)..];
+    let has = |needle: &str| tail.iter().any(|r| r.contains(needle));
+    let asking = has("waiting for user confirmation")
+        || has("ожидание подтверждения от пользователя")
+        || has("do you trust this folder")
+        || (has("yes, allow once") && (has("apply this change") || has("allow execution") || has("do you want to proceed") || has("shell command execution")));
+    let was = t.status.as_ref().map(|s| s.state.as_str());
+    let state = if asking {
+        "blocked"
+    } else if tail.iter().rev().take(8).any(|r| r.contains("esc to cancel")) {
+        "working"
+    } else if matches!(was, Some("working")) {
+        "done"
+    } else if was.is_none() {
+        "idle"
+    } else {
+        return None;
+    };
+    if was == Some(state) {
+        return None;
+    }
+    Some(StatusReport {
+        state,
+        kind: (state == "blocked").then_some("question"),
+        progress: None,
+        id: String::new(),
+        app: app.to_owned(),
+        title: String::new(),
+        message: String::new(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,6 +150,22 @@ mod tests {
         let r = infer(&t, "◐ Editing").expect("working again");
         crate::status::apply(&mut t, &r);
         assert_eq!(infer(&t, "Qwen Code").map(|r| r.state), Some("done"));
+    }
+
+    #[test]
+    fn the_screen_tells_when_the_title_cannot() {
+        let mut t = terminal("node", &["node", "/opt/gigacode-qa"]);
+        let rows = |lines: &[&str]| lines.iter().map(|l| l.to_string()).collect::<Vec<_>>();
+        let r = infer_screen(&t, &rows(&["> type your message"])).expect("appears");
+        assert_eq!((r.state, r.app.as_str()), ("idle", "gigacode-qa"));
+        crate::status::apply(&mut t, &r);
+        let r = infer_screen(&t, &rows(&["⠋ Reading files (12s · esc to cancel)"])).expect("working");
+        crate::status::apply(&mut t, &r);
+        let r = infer_screen(&t, &rows(&["Apply this change?", "● 1. Yes, allow once"])).expect("blocked");
+        assert_eq!(r.state, "blocked");
+        crate::status::apply(&mut t, &r);
+        let r = infer_screen(&t, &rows(&["⠏ Ожидание подтверждения от пользователя..."]));
+        assert!(r.is_none(), "still blocked");
     }
 
     #[test]
