@@ -9,9 +9,8 @@
 # Finch never updates itself: people download a new version and install it.
 name: finch
 
+# Manual only: releases are built and uploaded by hand (scripts/finch-package).
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       targets:
