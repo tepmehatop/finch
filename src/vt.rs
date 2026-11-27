@@ -2406,6 +2406,19 @@ mod tests {
     }
 
     #[test]
+    fn the_cores_reset_at_the_shell_turns_a_leftover_mouse_mode_off() {
+        // An agent stopped with Ctrl+C leaves mouse reports on; back at the shell
+        // finch-core sends this (foreground.rs MOUSE_OFF) and the wheel scrolls again.
+        for on in [b"\x1b[?1002h\x1b[?1006h".as_slice(), b"\x1b[?1003h\x1b[?1006h", b"\x1b[?1000h", b"\x1b[?9h"] {
+            let mut vt = Vt::new(80, 2);
+            vt.write(on);
+            assert!(vt.mouse_tracking());
+            vt.write(b"\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l\x1b[?1015l\x1b[?1016l");
+            assert!(!vt.mouse_tracking());
+        }
+    }
+
+    #[test]
     fn mouse_reports_the_cell_under_the_pointer_with_fractional_cells() {
         // Programs that take the mouse (pi, vim) get the pointer's cell. At
         // zoom 1.3 a cell is 11.7 px; rounded to 11 the column ran ahead.

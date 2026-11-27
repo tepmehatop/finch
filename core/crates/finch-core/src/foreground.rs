@@ -156,6 +156,9 @@ pub fn procargs(pid: i32) -> Option<(Vec<String>, Vec<u8>)> {
     Some((argv, rest.to_vec()))
 }
 
+/// Turns off every mouse report mode (X10, normal, button, any; SGR, urxvt, UTF-8, pixels).
+const MOUSE_OFF: &[u8] = b"\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l\x1b[?1015l\x1b[?1016l";
+
 fn shell_root(root: &Foreground) -> bool {
     // Command and script wrappers can share their foreground group with a live agent.
     if root.argv.iter().skip(1).any(|arg| {
@@ -205,6 +208,12 @@ impl Core {
                 }
                 if foreground_changed {
                     self.emit(&mut st, "foreground", id, serde_json::to_value(&now).unwrap_or_default());
+                }
+                // Finch: a program that turned on mouse reports and quit without turning
+                // them off (an agent stopped with Ctrl+C) leaves the shell getting the
+                // wheel as text ("[<65;54;23M"). Back at the shell, they are turned off.
+                if foreground_changed && at_shell {
+                    self.output(&mut st, id, MOUSE_OFF);
                 }
                 // Finch: agents that show their state only on screen (GigaCode, Qwen
                 // Code without title glyphs) are read here, so a state that stays

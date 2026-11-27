@@ -540,7 +540,16 @@
     "Switch the model:": "Сменить модель:",
     "No models listed; type /model in the terminal.": "Список моделей не найден; наберите /model в терминале.",
     "One task to several agents, each on its own branch and worktree, so they don't touch each other's files. Add agents below; one agent can run several times, each copy on its own model (click the model to change it).": "Одна задача нескольким агентам, каждому — своя ветка и worktree, чтобы они не трогали файлы друг друга. Добавьте агентов ниже; один агент может работать в нескольких копиях, каждая на своей модели (клик по модели меняет её).",
-    "not a git repository": "это не git-репозиторий"
+    "not a git repository": "это не git-репозиторий",
+    "Sessions": "Сессии",
+    "Sessions in this project — click one to continue it": "Сессии этого проекта — нажмите, чтобы продолжить",
+    "Other file…": "Другой файл…",
+    "Reading…": "Читаю…",
+    "No sessions found in this project's folders.": "В папках этого проекта сессий нет.",
+    "What the chat sees. Copy it into a message if the chat stays empty.": "Что видит чат. Если чат остаётся пустым, скопируйте это и пришлите.",
+    "Chat view supports Claude Code and GigaCode (and Qwen Code). Finch doesn't see which agent this terminal runs.": "Чат умеет показывать Claude Code и GigaCode (и Qwen Code). Finch не видит, какой агент запущен в этом терминале.",
+    "Read it as GigaCode": "Это GigaCode",
+    "As Claude Code": "Это Claude Code"
   },
   "patterns": [
     [

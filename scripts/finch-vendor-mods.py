@@ -299,7 +299,7 @@ VIEW_SWITCH = '''h_flex().flex_none().gap(1).p(1).rounded(5).border_1().border_c
 VIEW_ROW = '''// Finch: how agents open (terminal, chat or both), shared with Finch's own + menu.
 function finchViewRow(t, cx) {
   const view = shared("finch.agentView") ?? (shared("finch.chatWithAgents") === false ? "terminal" : "both");
-  return h_flex().h(29).px(9).gap(6).items_center()
+  return h_flex().flex_none().h(29).px(9).gap(6).items_center()
     .child(div().flex_1().text_size(12).text_color(t.muted).child(L("Open agents as", "Открывать агента")))
     .children([["terminal", L("Terminal", "Терминал")], ["chat", L("Chat", "Чат")], ["both", L("Both", "Оба")]].map(([v, label]) =>
       div().id(`pa-view-${v}`).px(7).py(2).rounded(5).text_size(11.5).cursor_pointer()
@@ -311,7 +311,7 @@ function finchViewRow(t, cx) {
 
 // Finch: one task to several agents (fan-out), as in Finch's own + menu.
 function finchFanoutRow(t) {
-  return h_flex().id("pa-fanout").h(29).px(9).gap(10).items_center().rounded(6).cursor_pointer().text_color(t.foreground)
+  return h_flex().id("pa-fanout").flex_none().h(29).px(9).gap(10).items_center().rounded(6).cursor_pointer().text_color(t.foreground)
     .hover(s => s.bg(t.hover))
     .on_click(() => { closeOverlay(props().overlay); run("tab.new", { mod: "fanout", name: "Fan-out" }); })
     .child(div().w(14).text_size(13).child("⑂"))
@@ -333,6 +333,10 @@ SECOND = [
   const chat = Boolean(argv) && view !== "terminal" && /(^|\\/)(claude|gigacode|gigacode-qa|qwen)$/.test(argv[0] ?? "");'''),
     ("prodsovet/filesystem.js", "...(chat ? { chat: true } : {}) });", "...(chat ? { view } : {}) });"),
     ("prodsovet/file-new-menu.js", "export default class", VIEW_ROW),
+    # The two rows above take 58 px: the menus grow by that, or the agent list shrinks to nothing.
+    ("prodsovet/file-new-menu.js", "h(Math.min(540, 214 + Math.max(1, rows) * 32))", "h(Math.min(580, 272 + Math.max(1, rows) * 32))"),
+    ("prodsovet/file-new-menu.js", "h(Math.min(491, 167 + Math.max(1,", "h(Math.min(512, 225 + Math.max(1,"),
+    ("prodsovet/project-context.js", "width: 310, height: 540,", "width: 310, height: 580,"),
     ("prodsovet/file-new-menu.js",
      '''        .child(this.projectRow("terminal", pxIcon("terminal"),''',
      '''        .child(finchViewRow(t))

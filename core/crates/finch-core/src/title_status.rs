@@ -40,7 +40,17 @@ fn app(t: &Terminal) -> Option<&'static str> {
             }
         }
     }
-    None
+    // The title the agent sets ("Qwen - project", "GigaCode - project"), for an
+    // agent started some way its process doesn't show (a wrapper, a packed binary).
+    let shell = matches!(base(&fg.name).as_str(), "sh" | "bash" | "zsh" | "fish" | "nu" | "dash" | "ksh" | "tcsh" | "login");
+    if shell {
+        return None;
+    }
+    // Status glyphs and spaces before the name ("✦ Qwen - x"), then the name as a word.
+    let title = t.title.trim_start_matches(|c: char| c.is_whitespace() || !c.is_ascii()).to_lowercase();
+    APPS.iter()
+        .find(|(needle, _)| title.strip_prefix(needle).is_some_and(|rest| rest.chars().next().is_none_or(|c| !c.is_alphanumeric() && c != '-' && c != '_')))
+        .map(|(_, app)| *app)
 }
 
 /// The status `title` means for `t`, or None to report nothing.
@@ -218,6 +228,22 @@ mod tests {
         // An editor opening a GigaCode file is not GigaCode.
         let vim = terminal("vim", &["vim", "/Users/me/.gigacode/settings.json"]);
         assert!(!reads_screen(&vim));
+    }
+
+    #[test]
+    fn an_agent_is_known_by_the_title_it_sets() {
+        let mut t = terminal("gc", &["/opt/corp/bin/gc"]);
+        assert!(!reads_screen(&t));
+        t.title = "GigaCode - finch".into();
+        assert_eq!(infer_screen(&t, &["> ".to_string()]).map(|r| r.app), Some("gigacode".to_string()));
+        t.title = "✦ Qwen - finch".into();
+        assert!(reads_screen(&t));
+        // A shell or editor whose title only mentions it is not the agent.
+        t.title = "~/gigacode-notes - VIM".into();
+        assert!(!reads_screen(&t));
+        let mut zsh = terminal("zsh", &["-zsh"]);
+        zsh.title = "GigaCode - finch".into();
+        assert!(!reads_screen(&zsh));
     }
 
     #[test]

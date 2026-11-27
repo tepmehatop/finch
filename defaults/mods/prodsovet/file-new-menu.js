@@ -32,7 +32,7 @@ function shortcut(name) {
 // Finch: how agents open (terminal, chat or both), shared with Finch's own + menu.
 function finchViewRow(t, cx) {
   const view = shared("finch.agentView") ?? (shared("finch.chatWithAgents") === false ? "terminal" : "both");
-  return h_flex().h(29).px(9).gap(6).items_center()
+  return h_flex().flex_none().h(29).px(9).gap(6).items_center()
     .child(div().flex_1().text_size(12).text_color(t.muted).child(L("Open agents as", "Открывать агента")))
     .children([["terminal", L("Terminal", "Терминал")], ["chat", L("Chat", "Чат")], ["both", L("Both", "Оба")]].map(([v, label]) =>
       div().id(`pa-view-${v}`).px(7).py(2).rounded(5).text_size(11.5).cursor_pointer()
@@ -44,7 +44,7 @@ function finchViewRow(t, cx) {
 
 // Finch: one task to several agents (fan-out), as in Finch's own + menu.
 function finchFanoutRow(t) {
-  return h_flex().id("pa-fanout").h(29).px(9).gap(10).items_center().rounded(6).cursor_pointer().text_color(t.foreground)
+  return h_flex().id("pa-fanout").flex_none().h(29).px(9).gap(10).items_center().rounded(6).cursor_pointer().text_color(t.foreground)
     .hover(s => s.bg(t.hover))
     .on_click(() => { closeOverlay(props().overlay); run("tab.new", { mod: "fanout", name: "Fan-out" }); })
     .child(div().w(14).text_size(13).child("⑂"))
@@ -92,7 +92,7 @@ export default class NewMenu extends View {
     const pxIcon = n => div().size(22).flex_none().flex().items_center().justify_center().child(svg(px(n)).size(15).text_color(t.muted));
     const worktree = action => () => openOverlay({ mod: "worktree", kind: "dialog", width: action === "new" ? 460 : 560, height: action === "new" ? 280 : 480, props: { space: space?.id, folder: cwd, action } });
     const rows = choices.length + (this.failed || this.agents.length === 0 ? 1 : 0);
-    return v_flex().id("new-menu").track_focus(this.handle).w_full().min_h(0).h(Math.min(540, 214 + Math.max(1, rows) * 32)).bg(t.popover).text_size(fontSize("newMenu.body"))
+    return v_flex().id("new-menu").track_focus(this.handle).w_full().min_h(0).h(Math.min(580, 272 + Math.max(1, rows) * 32)).bg(t.popover).text_size(fontSize("newMenu.body"))
       .on_key_down((e) => {
         if (e.modifiers.control || e.modifiers.platform || e.modifiers.alt) return;
         const agent = /^[1-9]$/.test(e.key) ? installed[Number(e.key) - 1] : null;
@@ -129,7 +129,7 @@ export default class NewMenu extends View {
     const installed = this.agents.filter(a => a.installed);
     const choices = this.failed ? installed : [...installed, ...this.agents.filter(a => !a.installed).slice(0, 2)];
     if (projectMode) return this.renderProject(space, choices, installed);
-    return v_flex().min_h(0).w_full().h(Math.min(491, 167 + Math.max(1, choices.length + (this.failed ? 1 : 0)) * metric("newMenu.row"))).bg(t.popover).p(5).text_size(fontSize("newMenu.body"))
+    return v_flex().min_h(0).w_full().h(Math.min(512, 225 + Math.max(1, choices.length + (this.failed ? 1 : 0)) * metric("newMenu.row"))).bg(t.popover).p(5).text_size(fontSize("newMenu.body"))
       .id("new-menu").track_focus(this.handle)
       .on_key_down((e) => {
         if (e.modifiers.control || e.modifiers.platform || e.modifiers.alt) return;

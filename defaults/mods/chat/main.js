@@ -12,7 +12,7 @@
 
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, ScrollHandle, Scrollbar, TextView, TextareaState, Textarea } from "gpui-base";
-import { theme, props, terminals, agents, hc, run, exec, home, readTextFile, pickFiles, fileTail, fileBefore, recentFiles, checking, settings, window, tr, shared, setShared } from "finch";
+import { theme, props, terminals, agents, hc, run, exec, home, readTextFile, pickFiles, fileTail, fileBefore, recentFiles, checking, settings, window, tr, shared, setShared, notify } from "finch";
 import { decodeLines, decodeJson, fold, summary, clip } from "./decode.js";
 
 const KEEP = 300; // blocks held while following the end
@@ -24,6 +24,7 @@ const W = (name) => `mods/workspace-chrome/${name}.svg`;
 
 const CLAIMS = "finch.chat.claims"; // log path → the terminal whose chat shows it
 const MANUAL = "finch.chat.manual"; // terminal → a log the person picked
+const FORCED = "finch.chat.kind"; // terminal → the agent the person said it runs
 
 // Which log family a terminal's agent writes, by program, report or command.
 // GigaCode clones (gigacode-qa, ...) share GigaCode's folder and format.
@@ -46,11 +47,17 @@ function kindOf(term) {
 
 // Session logs only: Qwen Code keeps <id>.runtime.json and <id>.title.json beside
 // <id>.jsonl; older forks write session-<time>.json (or <id>.json) per session.
+// A side file (<id>.usage.json, anything with a second dot) is never the log.
 function isLog(path) {
-  const name = path.split("/").pop();
-  if (name.endsWith(".jsonl")) return true;
-  return name.endsWith(".json") && !/\.(runtime|title|meta|lock|state)\.json$/.test(name) && !/^(logs|meta|settings)\.json$/.test(name);
+  const parts = path.split("/");
+  const name = parts.pop();
+  if (parts.includes("sessions")) return false;
+  if (name.endsWith(".jsonl")) return name.split(".").length === 2;
+  return name.endsWith(".json") && name.split(".").length === 2 && !/^(logs|meta|settings|installation_id|gigacode_token|oauth_creds|google_accounts)\.json$/.test(name);
 }
+
+// The session id a log is named for (<id>.jsonl, session-<time>-<id>.json).
+const idOf = (path) => path.split("/").pop().replace(/\.jsonl?$/, "");
 
 // A value given after `flag` in the agent's command (`--session-id x`, `-m x`).
 function argAfter(argv, ...flags) {
@@ -119,6 +126,9 @@ export default class Chat extends View {
         const hash = h?.stdout.trim();
         if (hash) dirs.push({ dir: `${base}/tmp/${hash}/chats`, depth: 0 });
       }
+      // Any other layout of the same agent: chat logs anywhere under its folder,
+      // still only ones written since this agent started (see pick).
+      dirs.push({ dir: base, depth: 4, deep: true });
     }
     return { roots, dirs, base: bases[0] };
   }
@@ -126,7 +136,15 @@ export default class Chat extends View {
   // Where this agent keeps its files: GigaCode in ~/.gigacode (a fork that kept
   // Qwen's folder: ~/.qwen), Qwen Code in ~/.qwen.
   bases() {
-    return this.kind === "qwen" ? ["~/.qwen"] : ["~/.gigacode", "~/.qwen"];
+    if (this.kind === "qwen") return ["~/.qwen"];
+    return [...new Set(["~/.gigacode", ...(this.found ?? []), "~/.qwen"])];
+  }
+
+  // Other GigaCode folders in the home folder (~/.gigacode-qa, ~/.gigacode-cli).
+  async discover() {
+    if (this.kind !== "gigacode" || this.found) return;
+    const r = await exec("sh", ["-c", 'cd "$HOME" && for d in .giga* .gc*; do [ -d "$d" ] && echo "$d"; done', "sh"]).catch(() => null);
+    this.found = (r?.stdout ?? "").split("\n").map((d) => d.trim()).filter(Boolean).map((d) => `~/${d}`);
   }
 
   // The session the agent in this terminal runs, from the file Qwen Code (and
@@ -158,8 +176,16 @@ export default class Chat extends View {
 
   candidates() {
     const out = [];
-    for (const { dir, depth } of this.dirs?.dirs ?? []) {
-      for (const suffix of [".jsonl", ".json"]) out.push(...recentFiles(dir, suffix, depth, 20));
+    const seen = new Set();
+    for (const { dir, depth, deep } of this.dirs?.dirs ?? []) {
+      for (const suffix of [".jsonl", ".json"]) {
+        for (const f of recentFiles(dir, suffix, depth, 20)) {
+          // Deep finds count only inside a chats folder (not settings, tokens, caches).
+          if (seen.has(f.path) || (deep && !f.path.includes("/chats/"))) continue;
+          seen.add(f.path);
+          out.push({ ...f, deep: Boolean(deep) });
+        }
+      }
     }
     return out.filter((f) => isLog(f.path)).sort((a, b) => b.modified - a.modified);
   }
@@ -172,7 +198,7 @@ export default class Chat extends View {
     const files = this.candidates();
     const id = this.sid ?? argAfter(term.argv, "--session-id", "--resume") ?? argAfter(term.foreground?.argv, "--session-id", "--resume");
     if (id) {
-      const own = files.find((f) => f.path.includes(id));
+      const own = files.find((f) => idOf(f.path) === id) ?? files.find((f) => f.path.includes(id));
       // A known session: its log or nothing yet (it appears with the first message).
       if (own || this.sid) return own?.path ?? null;
     }
@@ -181,7 +207,9 @@ export default class Chat extends View {
     const free = files.filter((f) => !claims[f.path] || claims[f.path] === this.address || !live.has(claims[f.path]));
     // Another session's older log is never shown: only one written since this agent started.
     const since = (this.startedMs(term) ?? 0) - 5000;
-    return free.find((f) => f.modified >= since)?.path ?? null;
+    const recent = free.filter((f) => f.modified >= since);
+    // This project's folders first; elsewhere in the agent's folder only when they have nothing.
+    return (recent.find((f) => !f.deep) ?? recent.find((f) => f.deep))?.path ?? null;
   }
 
   // When the agent in this terminal started (the foreground program's start, else the terminal's).
@@ -211,11 +239,12 @@ export default class Chat extends View {
     }
     this.seen = true;
     if (this.note === "ended" || this.note === "no-terminal") this.note = null;
-    this.kind = kindOf(term);
+    this.kind = (shared(FORCED) ?? {})[this.address] ?? kindOf(term);
     if (!this.kind) {
       this.note = "unsupported";
       return;
     }
+    await this.discover();
     this.dirs = await this.places(term);
     this.model = argAfter(term.argv, "-m", "--model") ?? argAfter(term.foreground?.argv, "-m", "--model") ?? (await this.defaultModel());
     await this.sessionOf(term);
@@ -321,7 +350,17 @@ export default class Chat extends View {
       return Boolean(this.path);
     }
     const term = this.term();
-    if (!term || (shared(MANUAL) ?? {})[this.address]) return false;
+    if (!term) return false;
+    const manual = (shared(MANUAL) ?? {})[this.address];
+    if (manual) {
+      // A resumed session stays until the agent is in yet another one (/clear, a restart).
+      await this.sessionOf(term);
+      if (!this.resumed || !this.sid || this.sid === this.resumed.from || this.sid === idOf(manual)) return false;
+      this.resumed = null;
+      const left = { ...(shared(MANUAL) ?? {}) };
+      delete left[this.address];
+      setShared(MANUAL, left);
+    }
     await this.sessionOf(term);
     const next = this.pick(term);
     if (!next || next === this.path) return false;
@@ -332,6 +371,76 @@ export default class Chat extends View {
     if (before) this.blocks.unshift({ kind: "note", text: "New session", off: this.first, key: `new-${this.first}` });
     this.toEnd();
     return true;
+  }
+
+  // This project's earlier sessions, newest first, each with its first message.
+  async listSessions() {
+    const files = this.candidates().filter((f) => !f.deep).slice(0, 30);
+    const out = [];
+    for (const f of files) {
+      const r = await exec("head", ["-c", "60000", f.path]).catch(() => null);
+      let first = "";
+      const text = r?.stdout ?? "";
+      try {
+        const blocks = f.path.endsWith(".json") ? decodeJson(text) : decodeLines(this.kind, text.split("\n").slice(0, -1), 0);
+        first = blocks.find((b) => b.kind === "user")?.text ?? "";
+      } catch {}
+      out.push({ path: f.path, modified: f.modified, first: first.replace(/\s+/g, " ").slice(0, 120) });
+    }
+    return out;
+  }
+
+  toggleSessions(cx) {
+    this.browsing = !this.browsing;
+    this.diagnosing = false;
+    if (!this.browsing) return cx.notify();
+    cx.spawn(async (cx) => {
+      this.sessions = null;
+      cx.notify();
+      this.sessions = await this.listSessions();
+      cx.notify();
+    });
+  }
+
+  // Shows the session here and has the agent continue it (/resume <id>; a fork
+  // without ids opens its own resume list in the terminal).
+  resume(f, cx) {
+    this.browsing = false;
+    const id = f.path.endsWith(".jsonl") ? idOf(f.path) : null;
+    this.resumed = { from: this.sid };
+    setShared(MANUAL, { ...(shared(MANUAL) ?? {}), [this.address]: f.path });
+    cx.spawn(async (cx) => {
+      await this.load(f.path);
+      this.toEnd();
+      cx.notify();
+      if (this.address) await hc(["send", this.address, id ? `/resume ${id}` : "/resume"]).catch(() => null);
+    });
+  }
+
+  force(kind, cx) {
+    setShared(FORCED, { ...(shared(FORCED) ?? {}), [this.address]: kind });
+    this.note = null;
+    cx.spawn(async (cx) => { await this.attach(); this.toEnd(); cx.notify(); });
+  }
+
+  // What the chat knows and where it looked, to copy into a message when it shows nothing.
+  diagnostics() {
+    const term = this.term();
+    const fg = term?.foreground;
+    const lines = [
+      `Finch chat diagnostics`,
+      `terminal: ${this.address ?? "-"}  kind: ${this.kind ?? "-"}  note: ${this.note ?? "-"}`,
+      `program: ${term?.program?.key ?? "-"}  status app: ${term?.report?.app ?? "-"}  title: ${term?.title ?? "-"}`,
+      `foreground: ${fg?.name ?? "-"} pid ${fg?.pid ?? "-"}  ${(fg?.argv ?? []).join(" ")}`,
+      `cwd: ${fg?.cwd ?? term?.cwd ?? "-"}`,
+      `session id: ${this.sid ?? "-"}  started: ${term ? new Date(this.startedMs(term) ?? 0).toISOString() : "-"}`,
+      `showing: ${this.path ?? "-"}`,
+      `folders: ${this.bases().join(", ")}`,
+      ...(this.dirs?.dirs ?? []).map((d) => `  looks in ${d.dir}${d.deep ? " (any chats folder)" : ""}`),
+      `logs found:`,
+      ...this.candidates().slice(0, 8).map((f) => `  ${new Date(f.modified).toISOString()} ${f.size}b ${f.path}`),
+    ];
+    return lines.join("\n");
   }
 
   choose(cx) {
@@ -552,9 +661,12 @@ export default class Chat extends View {
     const ended = Boolean(this.address) && !term && this.note !== "no-terminal" && (this.seen || Date.now() - this.born >= 15000);
     const statusColor = { working: t.working, blocked: t.blocked, done: t.done, idle: t.idle }[status] ?? t.dim;
 
+    // Wraps onto a second line in a narrow pane rather than cutting buttons off.
     const header = h_flex()
       .flex_none()
-      .h(38)
+      .flex_wrap()
+      .min_h(38)
+      .py(4)
       .px(12)
       .gap(8)
       .items_center()
@@ -567,8 +679,10 @@ export default class Chat extends View {
         .on_click((_e, cx) => this.pickModel(cx))
         .child(this.model ?? "Model").child(div().text_size(9).child("▾"))))
       .when(Boolean(statusLabel), (el) => el.child(h_flex().gap(5).items_center().child(div().size(6).rounded(3).bg(statusColor)).child(div().text_size(12).text_color(t.muted).child(statusLabel))))
-      .child(div().flex_1())
+      .child(div().flex_1().min_w(0))
       .when(Boolean(this.path), (el) => el.child(this.button(t, "chat-end", "Latest", (_e, cx) => { this.toEnd(); cx.notify(); })))
+      .when(Boolean(this.kind), (el) => el.child(this.button(t, "chat-sessions", "Sessions", (_e, cx) => this.toggleSessions(cx))))
+      .child(this.button(t, "chat-diag", "?", (_e, cx) => { this.diagnosing = !this.diagnosing; this.browsing = false; cx.notify(); }))
       .when(ended, (el) => el.child(div().text_size(12).text_color(t.dim).child("Session ended")))
       .when(Boolean(term), (el) => el
         .child(this.button(t, "chat-terminal", "Terminal", () => run("agent.view", { terminal: this.address, view: "terminal" })))
@@ -581,10 +695,33 @@ export default class Chat extends View {
         .on_click((_e, cx) => this.setModel(m, cx)).child(m)))
       .when(!(this.models ?? []).length, (el) => el.child(div().text_size(11.5).text_color(t.dim).child("No models listed; type /model in the terminal."))) : null;
 
+    const sessions = this.browsing ? v_flex().flex_none().max_h(260).border_b(1).border_color(t.border).bg(t.chrome)
+      .child(h_flex().px(12).pt(8).pb(4).gap(8).child(div().flex_1().text_size(11.5).text_color(t.dim).child("Sessions in this project — click one to continue it"))
+        .child(this.button(t, "chat-pick2", "Other file…", (_e, cx) => { this.browsing = false; this.choose(cx); })))
+      .child(v_flex().id("chat-sessions-list").flex_1().min_h(0).overflow_y_scroll().px(6).pb(6)
+        .when(this.sessions === null, (el) => el.child(div().px(6).py(4).text_size(12).text_color(t.dim).child("Reading…")))
+        .when(Array.isArray(this.sessions) && !this.sessions.length, (el) => el.child(div().px(6).py(4).text_size(12).text_color(t.dim).child("No sessions found in this project's folders.")))
+        .children((this.sessions ?? []).map((f, i) => h_flex().id(`chat-s-${i}`).px(6).py(4).gap(8).rounded(5).cursor_pointer().hover((s) => s.bg(t.hover))
+          .when(f.path === this.path, (el) => el.bg(t.selected))
+          .on_click((_e, cx) => this.resume(f, cx))
+          .child(div().flex_none().w(96).text_size(11).text_color(t.dim).child(new Date(f.modified).toLocaleString().slice(0, 17)))
+          .child(div().flex_1().min_w(0).truncate().text_size(12).text_color(t.foreground).child(f.first || f.path.split("/").pop()))))) : null;
+    const diag = this.diagnosing ? (() => {
+      const text = this.diagnostics();
+      return v_flex().flex_none().max_h(300).p(10).gap(6).border_b(1).border_color(t.border).bg(t.chrome)
+        .child(h_flex().gap(8).child(div().flex_1().text_size(11.5).text_color(t.dim).child("What the chat sees. Copy it into a message if the chat stays empty."))
+          .child(this.button(t, "chat-diag-copy", "Copy", (_e, cx) => { cx.write_to_clipboard(text); notify({ title: "Copied", level: "info" }); })))
+        .child(div().id("chat-diag-text").flex_1().min_h(0).overflow_y_scroll().child(this.mono(t, "chat-diag-md", text)));
+    })() : null;
+
     let body;
     if ((ended || this.note === "ended") && !this.blocks.length) body = this.empty(t, "The agent's session has ended. Close this chat, or start the agent again.");
     else if (this.note === "no-terminal") body = this.empty(t, "This chat isn't tied to a terminal. Open it from an agent's terminal with ⌘⇧J (Ctrl+Shift+J).");
-    else if (this.note === "unsupported") body = this.empty(t, "Chat view supports Claude Code and GigaCode (and Qwen Code). This terminal runs something else.");
+    else if (this.note === "unsupported") body = v_flex().size_full().items_center().justify_center().p(24).gap(10)
+      .child(div().max_w(460).text_size(13).text_color(t.muted).text_center().child("Chat view supports Claude Code and GigaCode (and Qwen Code). Finch doesn't see which agent this terminal runs."))
+      .child(h_flex().gap(6)
+        .child(this.button(t, "chat-as-giga", "Read it as GigaCode", (_e, cx) => this.force("gigacode", cx), true))
+        .child(this.button(t, "chat-as-claude", "As Claude Code", (_e, cx) => this.force("claude", cx))));
     else if (this.note === "waiting") body = v_flex().size_full().items_center().justify_center().p(24).gap(10)
       .child(div().max_w(520).text_size(13).text_color(t.muted).text_center().child("Waiting for the agent's session log. It appears after the first message."))
       .child(div().text_size(11.5).text_color(t.dim).child("Looking in:"))
@@ -651,6 +788,6 @@ export default class Chat extends View {
           .child(this.button(t, "chat-send", "Send", (_e, cx) => this.send(cx), true)),
       );
 
-    return v_flex().id("chat").size_full().bg(t.background).child(header).when(Boolean(models), (el) => el.child(models)).child(body).child(composer);
+    return v_flex().id("chat").size_full().bg(t.background).child(header).when(Boolean(models), (el) => el.child(models)).when(Boolean(sessions), (el) => el.child(sessions)).when(Boolean(diag), (el) => el.child(diag)).child(body).child(composer);
   }
 }

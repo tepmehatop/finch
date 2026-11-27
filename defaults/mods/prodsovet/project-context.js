@@ -45,5 +45,5 @@ export function openProjectDialog() {
 
 export function openSessionMenu(space = spaces().find(s => s.active)) {
   if (!space) return openProjectDialog();
-  openOverlay({ mod: "prodsovet", kind: "popup", width: 310, height: 540, props: { role: "new-menu", space: space.id } });
+  openOverlay({ mod: "prodsovet", kind: "popup", width: 310, height: 580, props: { role: "new-menu", space: space.id } });
 }
