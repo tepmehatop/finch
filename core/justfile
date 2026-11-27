@@ -1,0 +1,15 @@
+default:
+    @just --list
+
+build:
+    cargo build --locked
+
+test:
+    cargo test --locked -p finch-core
+
+fmt:
+    cargo fmt --all
+
+# Build and install this checkout's core; running terminals are kept.
+install:
+    sh scripts/install-local.sh

@@ -1,0 +1,1 @@
+{ "place": "none", "focusable": true, "palette": [{ "title": "Agent chat", "command": "agent.chat", "words": "chat transcript conversation messages" }] }

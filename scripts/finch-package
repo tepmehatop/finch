@@ -1,0 +1,113 @@
+#!/bin/bash
+# Finch: builds one edition of the app plus its core (hc) and packs them together.
+#
+#   scripts/finch-package <full|closed> [rust-triple]
+#
+#   full   aarch64-apple-darwin  -> dist/finch-full-macos-aarch64.tar.gz   (Finch.app)
+#   full   x86_64-apple-darwin   -> dist/finch-full-macos-x86_64.tar.gz    (Finch.app)
+#   closed aarch64-apple-darwin  -> dist/finch-closed-macos-aarch64.tar.gz (Finch Closed.app)
+#   closed x86_64-apple-darwin   -> dist/finch-closed-macos-x86_64.tar.gz  (Finch Closed.app)
+#   closed x86_64-unknown-linux-gnu -> dist/finch-closed-linux-x86_64.tar.gz (finch-closed/)
+#
+# Unlike Finch's scripts/package, the core ships inside the package (the app
+# finds hc next to itself first, src/edition.rs), so nothing has to be
+# downloaded on first start: required for a closed network.
+#
+# Finch never updates itself and sends nothing: a new version is installed by hand.
+#
+# Environment:
+#   APPLE_CERTIFICATE_P12 / APPLE_CERTIFICATE_PASSWORD  Developer ID signing;
+#                        without them macOS builds are signed ad hoc.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+edition=${1:?usage: scripts/finch-package <full|closed> [rust-triple]}
+case "$edition" in full | closed) ;; *) echo "finch-package: edition must be full or closed" >&2; exit 1 ;; esac
+triple=${2:-}
+
+version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+if [[ -n $triple ]]; then
+  case "$triple" in
+    *-linux-*) os=linux ;;
+    *-apple-darwin) os=macos ;;
+    *) echo "finch-package: unsupported target $triple (Finch ships macOS and Linux)" >&2; exit 1 ;;
+  esac
+  arch=${triple%%-*}
+else
+  case "$(uname -s)" in
+    Linux) os=linux ;;
+    Darwin) os=macos ;;
+    *) echo "finch-package: unsupported OS $(uname -s)" >&2; exit 1 ;;
+  esac
+  arch=$(uname -m)
+fi
+case "$arch" in
+  x86_64 | amd64) arch=x86_64 ;;
+  arm64 | aarch64) arch=aarch64 ;;
+  *) echo "finch-package: unsupported CPU $arch" >&2; exit 1 ;;
+esac
+target="$os-$arch"
+if [[ -n $triple ]]; then app_bin=target/$triple/release; core_bin=core/target/$triple/release; else app_bin=target/release; core_bin=core/target/release; fi
+
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
+
+echo "finch-package: Finch $version ($edition) for $target"
+
+FINCH_EDITION="$edition" cargo build --release --locked ${triple:+--target "$triple"}
+(cd core && FINCH_EDITION="$edition" cargo build --release --locked -p finch-core ${triple:+--target "$triple"})
+hc_src="$core_bin/finch-core"
+[[ -x $hc_src ]] || { echo "finch-package: the core build produced no finch-core in $core_bin" >&2; exit 1; }
+
+if [[ $os == linux ]]; then export TMPDIR=${TMPDIR:-/var/tmp}; fi
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+mkdir -p dist
+out="dist/finch-$edition-$target.tar.gz"
+
+if [[ $os == linux ]]; then
+  name="finch-$edition"
+  dir="$work/$name"
+  mkdir -p "$dir"
+  cp "$app_bin/finch" "$dir/finch"
+  cp "$hc_src" "$dir/finch-core"
+  ln -s finch-core "$dir/hc"
+  cp assets/finch/finch-icon.svg "$dir/finch.svg"
+  cp assets/finch/finch-icon-512.png "$dir/finch.png"
+  printf '%s\n' "$edition" > "$dir/EDITION"
+  tar -czf "$out" -C "$work" "$name"
+else
+  if [[ $edition == closed ]]; then bundle="Finch Closed"; id=dev.finch.app.closed; else bundle="Finch"; id=dev.finch.app; fi
+  app="$work/$bundle.app"
+  mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+  cp "$app_bin/finch" "$app/Contents/MacOS/Finch"
+  cp "$hc_src" "$app/Contents/MacOS/finch-core"
+  ln -s finch-core "$app/Contents/MacOS/hc"
+  cp assets/finch/Finch.icns "$app/Contents/Resources/Finch.icns"
+  printf '%s\n' "$edition" > "$app/Contents/Resources/EDITION"
+  cat > "$app/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <key>CFBundleExecutable</key><string>Finch</string>
+    <key>CFBundleIdentifier</key><string>$id</string>
+    <key>CFBundleName</key><string>$bundle</string>
+    <key>CFBundleDisplayName</key><string>$bundle</string>
+    <key>CFBundleIconFile</key><string>Finch</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>$version</string>
+    <key>CFBundleVersion</key><string>$version</string>
+    <key>LSMinimumSystemVersion</key><string>11.0</string>
+    <key>NSMicrophoneUsageDescription</key><string>Terminal programs running in Finch can use the microphone, for example for voice input.</string>
+    <key>NSCameraUsageDescription</key><string>Terminal programs running in Finch can use the camera.</string>
+    <key>NSAppleEventsUsageDescription</key><string>Terminal programs running in Finch can use AppleScript to control other apps.</string>
+    <key>NSPrincipalClass</key><string>NSApplication</string>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>LSEnvironment</key><dict/></dict></plist>
+PLIST
+  # The nested core first: a bundle's signature covers code already signed inside it.
+  if [[ -z ${APPLE_CERTIFICATE_P12:-} ]]; then codesign --force --sign - "$app/Contents/MacOS/finch-core"; fi
+  scripts/mac-sign "$app"
+  tar -czf "$out" -C "$work" "$bundle.app"
+fi
+
+echo "finch-package: $out ($(sha256 "$out"))"

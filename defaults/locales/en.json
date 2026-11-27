@@ -1,0 +1,5 @@
+{
+  "//": "Finch: English overrides. Mods are written in English already; this file only fixes texts that the automatic Finch -> Finch rename gets wrong. Keys are the exact English text a mod draws.",
+  "exact": {},
+  "patterns": []
+}

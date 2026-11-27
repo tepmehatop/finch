@@ -1,0 +1,1 @@
+Finch.app: code object is not signed at all

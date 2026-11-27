@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="824" height="824" viewBox="100 100 824 824">
+  <!-- Finch app icon: a goldfinch perched on a terminal prompt. Original artwork for Finch. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22324A"/>
+      <stop offset="1" stop-color="#0E1622"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFD84A"/>
+      <stop offset="1" stop-color="#F2B705"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <!-- prompt line the bird sits on -->
+  <path d="M246 716 L306 760 L246 804" fill="none" stroke="#5FD38D" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="350" y1="790" x2="780" y2="790" stroke="#5FD38D" stroke-width="34" stroke-linecap="round" opacity="0.9"/>
+  <!-- legs -->
+  <path d="M520 662 L506 772 M586 652 L590 772" stroke="#E8873A" stroke-width="18" stroke-linecap="round"/>
+  <!-- tail -->
+  <path d="M352 560 L196 632 Q186 650 204 660 L388 618 Z" fill="#3B4A63"/>
+  <!-- body -->
+  <path d="M330 560 C330 440 450 372 586 384 C700 394 760 470 748 560 C736 650 650 700 536 698 C420 696 330 650 330 560 Z" fill="url(#body)"/>
+  <!-- head -->
+  <circle cx="660" cy="372" r="112" fill="url(#body)"/>
+  <!-- black cap -->
+  <path d="M556 344 C572 280 630 252 690 262 C726 268 754 290 768 318 C724 300 676 302 640 320 C610 334 584 344 556 344 Z" fill="#111722"/>
+  <!-- wing -->
+  <path d="M388 498 C450 450 560 452 640 502 C600 520 560 560 520 612 C470 610 420 586 388 560 C374 540 374 512 388 498 Z" fill="#111722"/>
+  <path d="M440 560 C490 548 540 556 580 576" stroke="#F7F7F2" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <!-- eye -->
+  <circle cx="696" cy="360" r="20" fill="#111722"/>
+  <circle cx="702" cy="354" r="6" fill="#FFFFFF"/>
+  <!-- beak -->
+  <path d="M760 364 L836 390 L758 414 Z" fill="#E8873A"/>
+</svg>

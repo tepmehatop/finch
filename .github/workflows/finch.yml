@@ -1,0 +1,142 @@
+# Finch builds: every edition and platform we ship.
+#
+#   macOS Apple Silicon: full + closed
+#   macOS Intel:         full + closed (cross-built on an Apple Silicon runner)
+#   Linux x86_64:        closed only
+#
+# A `v*` tag (matching Cargo.toml's version) builds everything and attaches
+# the archives to a GitHub Release. "Run workflow" builds without releasing.
+# Finch never updates itself: people download a new version and install it.
+name: finch
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "Which builds: all, macos, linux"
+        default: all
+        type: choice
+        options: [all, macos, linux]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finch-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RUST_TOOLCHAIN: 1.95.0
+  ZIG_VERSION: 0.16.0
+  # Release builds never report to Finch's servers (src/edition.rs); this just
+  # keeps CI runs quiet too.
+  DO_NOT_TRACK: "1"
+
+jobs:
+  # Picks the builds: a tag builds all; "Run workflow" builds what was asked.
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - id: pick
+        env:
+          WANT: ${{ github.event_name == 'push' && 'all' || inputs.targets }}
+        run: |
+          # One job per platform builds both of its editions in turn: only the
+          # app crate changes between them, so the second build is quick.
+          # Intel is cross-built on an Apple Silicon runner. Linux runs on the
+          # oldest Ubuntu we can, since the app links the system glibc.
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          builds = [
+              {"os": "macos", "triple": "aarch64-apple-darwin", "runner": "macos-15", "editions": "full closed"},
+              {"os": "macos", "triple": "x86_64-apple-darwin", "runner": "macos-15", "editions": "full closed"},
+              {"os": "linux", "triple": "x86_64-unknown-linux-gnu", "runner": "ubuntu-22.04", "editions": "closed"},
+          ]
+          want = os.environ["WANT"]
+          print("matrix=" + json.dumps({"include": [b for b in builds if want in ("all", b["os"])]}))
+          PY
+
+  build:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.triple }}
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+            core/target
+          key: finch-${{ matrix.triple }}-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', 'core/Cargo.lock') }}
+          restore-keys: finch-${{ matrix.triple }}-${{ env.RUST_TOOLCHAIN }}-
+      - name: Linux build dependencies
+        if: matrix.os == 'linux'
+        timeout-minutes: 10
+        run: |
+          scripts/ci-apt \
+            pkg-config clang libclang-dev \
+            libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libvulkan-dev libfontconfig-dev libfreetype-dev
+      - name: Version matches the tag
+        if: github.ref_type == 'tag'
+        run: |
+          want="v$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          [ "$want" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME but Cargo.toml says $want"; exit 1; }
+      - name: Build and pack
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          for edition in ${{ matrix.editions }}; do
+            scripts/finch-package "$edition" "${{ matrix.triple }}"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finch-${{ matrix.triple }}
+          path: dist/finch-*.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Finch ${GITHUB_REF_NAME#v}" \
+            --notes "Finch ${GITHUB_REF_NAME#v}. macOS archives are signed ad hoc unless a Developer ID is configured: after unpacking run \`xattr -dr com.apple.quarantine 'Finch.app'\`." \
+            dist/finch-*.tar.gz

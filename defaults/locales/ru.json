@@ -1,0 +1,647 @@
+{
+  "//": "Finch: русский интерфейс. Ключ — английский текст ровно так, как его рисует мод; значение — что показать. 'patterns': [регулярное выражение, замена] для текстов с подстановками ($1, $2 — захваченные части). Найти непереведённое: scripts/finch-strings.py --missing",
+  "exact": {
+    "Welcome": "Добро пожаловать",
+    "Welcome to Finch": "Добро пожаловать в Finch",
+    "Drag to move": "Перетащите, чтобы сдвинуть",
+    "Back": "Назад",
+    "Not now": "Не сейчас",
+    "Next": "Далее",
+    "Open a space": "Открыть пространство",
+    "Done": "Готово",
+    "Cancel": "Отмена",
+    "Close": "Закрыть",
+    "Save": "Сохранить",
+    "Add": "Добавить",
+    "Added": "Добавлено",
+    "Remove": "Удалить",
+    "Rename": "Переименовать",
+    "Update": "Обновить",
+    "Reset": "Сбросить",
+    "Confirm": "Подтвердить",
+    "Are you sure?": "Вы уверены?",
+    "Copy": "Копировать",
+    "Copied": "Скопировано",
+    "Paste": "Вставить",
+    "Hide": "Скрыть",
+    "Show": "Показать",
+    "Play": "Воспроизвести",
+    "Name": "Имя",
+    "Loading…": "Загрузка…",
+    "Got it": "Понятно",
+    "Try again": "Повторить",
+    "Esc": "Esc",
+    "Finch runs your terminals in the background": "Finch держит ваши терминалы в фоне",
+    "The terminals and agents you open here don't live in this window. They run in finch-core, a small background program on your computer. Close Finch, update it, or let it crash, and your agents keep working. Open it again and everything is where you left it, as long as the computer is on.": "Терминалы и агенты, которые вы здесь открываете, живут не в этом окне, а в finch-core — небольшой фоновой программе на вашем компьютере. Закройте Finch, обновите его или даже уроните — агенты продолжат работать. Откройте снова, и всё будет на своих местах, пока компьютер включён.",
+    "Agents tell you when they need you": "Агенты сами сообщают, когда нужны вы",
+    "A ring while one works, “Needs you” when it asks something, a sound when it finishes.": "Кольцо, пока агент работает, «Ждёт вас», когда он что-то спрашивает, и звук, когда закончил.",
+    "Agents can start helpers": "Агенты могут запускать помощников",
+    "They show up under the agent that started them. Click one to watch it.": "Помощники показываются под агентом, который их запустил. Нажмите, чтобы посмотреть.",
+    "Your other machines, in the same window": "Другие ваши машины — в этом же окне",
+    "A server or a Mac mini runs its own finch-core, so its agents keep going even while this laptop sleeps.": "Сервер или Mac mini запускает свой finch-core, и его агенты работают, даже когда этот ноутбук спит.",
+    "Add your other machines": "Добавьте другие машины",
+    "Pick a host from your ssh config. Finch connects, installs finch-core there if it's missing, and lists that machine in the sidebar with its own spaces.": "Выберите хост из ssh config. Finch подключится, при необходимости установит туда finch-core и покажет машину в боковой панели с её пространствами.",
+    "Not now? Add machine is at the bottom of the sidebar too.": "Не сейчас? «Добавить машину» есть и внизу боковой панели.",
+    "Choose your panels": "Выберите панели",
+    "Finch comes with a couple of panels. Turn one on and it appears beside your terminals. Drag this window aside to see it. Later, the buttons in the tab bar open and close them.": "В Finch есть несколько панелей. Включите панель, и она появится рядом с терминалами (сдвиньте это окно, чтобы увидеть). Потом их можно открывать и закрывать кнопками на панели вкладок.",
+    "Ask your agent for a board of your agents, your pull requests, a cost meter, or the sidebar on the right. Not sure what's possible? Ask it that too.": "Попросите агента сделать доску агентов, список pull request'ов, счётчик расходов или боковую панель справа. Не знаете, что возможно? Спросите и об этом.",
+    "Files": "Файлы",
+    "The folder you're in as a tree. Open a file to read it, highlighted.": "Текущая папка деревом. Откройте файл, чтобы прочитать его с подсветкой.",
+    "Changes": "Изменения",
+    "What your agents changed: every file with its diff, and a commit box.": "Что изменили агенты: каждый файл с диффом и поле для коммита.",
+    "One key opens everything": "Одна клавиша открывает всё",
+    "It opens the command palette, with every action by name and its key. It works the same in every layout.": "Она открывает палитру команд: все действия по названию и их клавиши. Работает одинаково во всех раскладках.",
+    "Make it yours": "Настройте под себя",
+    "Every part of this window is a layout or a mod: plain files your agent can change or add to. Give it this line to start:": "Каждая часть этого окна — раскладка или мод: обычные файлы, которые агент может менять и дополнять. Для начала дайте ему эту строку:",
+    "Then ask for anything: “move the sidebar to the right”, “a panel with my pull requests”.": "Потом просите что угодно: «перенеси боковую панель вправо», «панель с моими pull request'ами».",
+    "Read ~/.config/finch/AGENTS.md, then tell me what you can change in Finch.": "Прочитай ~/.config/finch/AGENTS.md и расскажи, что ты можешь изменить в Finch.",
+    "Your terminals, outside this window too": "Ваши терминалы — и за пределами этого окна",
+    "hc is finch-core's command line. In any terminal, hc ls lists everything running and hc attach t3 jumps into one. Your agents can use it to start and watch other agents for you. Tell them to read hc's help, or make it a skill.": "hc — командная строка finch-core. В любом терминале hc ls покажет всё запущенное, а hc attach t3 подключит к нужному. Агенты могут с его помощью запускать других агентов и следить за ними. Попросите их прочитать справку hc или сделайте из неё skill.",
+    "More examples in Settings": "Больше примеров в настройках",
+    "Settings › Look has more layouts to try or start from, Finch 98 among them. Your agent can copy any of them and change anything.": "В «Настройки › Вид» есть другие раскладки, в том числе Finch 98. Агент может скопировать любую и изменить что угодно.",
+    "Something off or missing? Settings › Send feedback. We read every one.": "Что-то не так или чего-то не хватает? Настройки › Отправить отзыв.",
+    "Something off or missing? Settings › Send feedback.": "Что-то не так или чего-то не хватает? Настройки › Отправить отзыв.",
+    "Coming from finch?": "Переходите с finch (TUI)?",
+    "This is a new app on a new core. Your finch workspaces stay where they are; nothing moves over.": "Это новое приложение на новом ядре. Рабочие пространства finch остаются на месте, ничего не переносится.",
+    "Same idea as before: spaces, tabs and terminals.": "Идея та же: пространства, вкладки и терминалы.",
+    "Want your keybinds and settings carried over? Give your agent this line:": "Хотите перенести сочетания клавиш и настройки? Дайте агенту эту строку:",
+    "Read `finch --skill`, then migrate my keybinds and settings from ~/.config/finch/config.toml": "Прочитай `finch --skill`, затем перенеси мои сочетания клавиш и настройки из ~/.config/finch/config.toml",
+    "Size": "Размер",
+    "What's new in Finch": "Что нового в Finch",
+    "What's new": "Что нового",
+    "Also fixed": "Также исправлено",
+    "Recent": "Недавние",
+    "Tab": "Вкладка",
+    "Pane": "Панель",
+    "Space": "Пространство",
+    "Spaces": "Пространства",
+    "Layout": "Раскладка",
+    "Terminal": "Терминал",
+    "Terminals": "Терминалы",
+    "Agent": "Агент",
+    "Agents": "Агенты",
+    "Window": "Окно",
+    "Mod": "Мод",
+    "App": "Приложение",
+    "New tab": "Новая вкладка",
+    "new tab": "новая вкладка",
+    "Go to space or tab…": "Перейти к пространству или вкладке…",
+    "Go to a tab, space or agent…": "Перейти к вкладке, пространству или агенту…",
+    "Go to…": "Перейти…",
+    "Rename tab": "Переименовать вкладку",
+    "Close tab": "Закрыть вкладку",
+    "Next tab": "Следующая вкладка",
+    "Previous tab": "Предыдущая вкладка",
+    "Split right": "Разделить вправо",
+    "Split down": "Разделить вниз",
+    "Close pane": "Закрыть панель",
+    "Zoom pane": "Развернуть панель",
+    "New space": "Новое пространство",
+    "new space": "новое пространство",
+    "Rename space": "Переименовать пространство",
+    "Close space": "Закрыть пространство",
+    "Next space": "Следующее пространство",
+    "Previous space": "Предыдущее пространство",
+    "Next layout": "Следующая раскладка",
+    "Reset layout": "Сбросить раскладку",
+    "Duplicate layout": "Дублировать раскладку",
+    "Duplicate mod": "Дублировать мод",
+    "Mod to copy; creates <name>-copy": "Мод для копирования; будет создан <имя>-copy",
+    "New terminal": "Новый терминал",
+    "Next agent": "Следующий агент",
+    "Previous agent": "Предыдущий агент",
+    "Minimize window": "Свернуть окно",
+    "Maximize window": "Развернуть окно",
+    "Close window": "Закрыть окно",
+    "Settings": "Настройки",
+    "Keys": "Клавиши",
+    "Keybinds": "Сочетания клавиш",
+    "Reset to the default screen": "Вернуть экран по умолчанию",
+    "Zoom in": "Увеличить",
+    "Zoom out": "Уменьшить",
+    "Reset zoom": "Сбросить масштаб",
+    "Quit Finch": "Выйти из Finch",
+    "Type a command…": "Введите команду…",
+    "Type to filter…": "Фильтр…",
+    "Look": "Вид",
+    "Keyboard": "Клавиатура",
+    "Machines": "Машины",
+    "Alerts": "Оповещения",
+    "Updates": "Обновления",
+    "Privacy": "Конфиденциальность",
+    "System": "Как в системе",
+    "Light": "Светлая",
+    "Dark": "Тёмная",
+    "Type to search fonts": "Поиск шрифта",
+    "settings.json has errors: fix it first": "В settings.json ошибки: сначала исправьте их",
+    "Cannot read settings.json": "Не удалось прочитать settings.json",
+    "Not saved to settings.json": "Не сохранено в settings.json",
+    "This layout sets its own; yours shows in the others.": "Эта раскладка задаёт своё значение; ваше действует в остальных.",
+    "Theme": "Тема",
+    "Appearance": "Оформление",
+    "Light or dark, or as your system is now.": "Светлое, тёмное или как в системе.",
+    "For the layout you're in: each layout keeps its own light and dark theme.": "Для текущей раскладки: у каждой раскладки свои светлая и тёмная темы.",
+    "Size and fonts": "Размер и шрифты",
+    "Zoom": "Масштаб",
+    "Everything: terminals, panels, text.": "Всё сразу: терминалы, панели, текст.",
+    "Terminal font": "Шрифт терминала",
+    "Terminal font weight": "Насыщенность шрифта терминала",
+    "Terminal line height": "Высота строки терминала",
+    "Terminal cell width": "Ширина ячейки терминала",
+    "Terminal scroll speed": "Скорость прокрутки терминала",
+    "Interface font": "Шрифт интерфейса",
+    "Automatic (Alt on US keyboards)": "Автоматически (Alt на US-раскладке)",
+    "Types characters": "Вводит символы",
+    "Left Option is Alt": "Левый Option — это Alt",
+    "Right Option is Alt": "Правый Option — это Alt",
+    "Option key": "Клавиша Option",
+    "Use Option for terminal shortcuts or to type accents and special characters.": "Option можно использовать для сочетаний в терминале или для ввода спецсимволов.",
+    "Use Finch right-click menu": "Контекстное меню Finch по правому клику",
+    "Send right-clicks to pane": "Передавать правый клик в панель",
+    "Language": "Язык",
+    "Interface language": "Язык интерфейса",
+    "Couldn't read machines.": "Не удалось прочитать список машин.",
+    "It didn't work.": "Не получилось.",
+    "Updating…": "Обновление…",
+    "Renaming…": "Переименование…",
+    "Removing…": "Удаление…",
+    "hc version unknown": "версия hc неизвестна",
+    "Agents stop when you disconnect. Click for the fix.": "Агенты останавливаются при отключении. Нажмите, чтобы исправить.",
+    "needs a login: run": "нужен вход: выполните",
+    "Copying this computer's finch-core. Its terminals keep running.": "Копируем finch-core с этого компьютера. Терминалы продолжают работать.",
+    "Remove machine": "Удалить машину",
+    "New name (addresses using the old name stop working)": "Новое имя (адреса со старым именем перестанут работать)",
+    "Your computers, reached over ssh. Their terminals keep running when you disconnect.": "Ваши компьютеры, доступные по ssh. Их терминалы работают и после отключения.",
+    "This computer": "Этот компьютер",
+    "this computer": "этот компьютер",
+    "Reading machines…": "Читаем список машин…",
+    "No other machines yet.": "Других машин пока нет.",
+    "Add a machine": "Добавить машину",
+    "Add machine": "Добавить машину",
+    "Couldn't connect.": "Не удалось подключиться.",
+    "This machine was rebuilt or replaced. Click to connect to the new one.": "Эту машину пересобрали или заменили. Нажмите, чтобы подключиться к новой.",
+    "Connecting…": "Подключение…",
+    "Connecting": "Подключение",
+    "Connect": "Подключить",
+    "New space there": "Новое пространство там",
+    "The server ends your programs when your last login closes, for example when your laptop sleeps.": "Сервер завершает ваши программы, когда закрывается последний вход, например когда ноутбук засыпает.",
+    "macOS asks on the Mac's own screen before an agent reads Desktop, Documents or Downloads, and waits until someone answers. Give finch-core Full Disk Access there and it never asks again: in the list, press + and pick this file:": "macOS спрашивает на экране самого Mac, прежде чем агент прочитает «Рабочий стол», «Документы» или «Загрузки», и ждёт ответа. Дайте finch-core «Полный доступ к диску», и вопросов больше не будет: нажмите + в списке и выберите этот файл:",
+    "It's open on the Mac's screen.": "Окно открыто на экране того Mac.",
+    "A VPS, a Mac mini, a box at home: Finch reaches it over ssh, and agents there keep running while your laptop sleeps.": "VPS, Mac mini, сервер дома: Finch подключается по ssh, а агенты там работают, пока ноутбук спит.",
+    "From your ssh config": "Из вашего ssh config",
+    "Your ssh config lists no hosts": "В ssh config нет хостов",
+    "Reading ~/.ssh/config…": "Читаем ~/.ssh/config…",
+    "Or type how ssh reaches it": "Или введите, как к нему подключиться по ssh",
+    "it didn't answer": "не ответил",
+    "it didn't work": "не получилось",
+    "Could not find the remote home folder.": "Не удалось найти домашнюю папку на удалённой машине.",
+    "Finch's sound": "Звук Finch",
+    "Sounds": "Звуки",
+    "Play sounds": "Воспроизводить звуки",
+    "When an agent needs you, and when one finishes while you're not looking. A note shows in the corner either way.": "Когда агент ждёт вас и когда он закончил, пока вы смотрели в другое место. Уведомление в углу появится в любом случае.",
+    "An agent needs you": "Агент ждёт вас",
+    "An agent finished": "Агент закончил",
+    "Want your own sounds? Ask your agent to set sounds.done and sounds.blocked in settings.json to an MP3.": "Хотите свои звуки? Попросите агента указать MP3 в sounds.done и sounds.blocked в settings.json.",
+    "Checking…": "Проверка…",
+    "No successful check. Check your connection and try again.": "Проверка не удалась. Проверьте соединение и попробуйте снова.",
+    "✓ Up to date": "✓ Последняя версия",
+    "Check now": "Проверить сейчас",
+    "A build from source: it updates with git, not here.": "Сборка из исходников: обновляется через git, а не здесь.",
+    "Restart to update": "Перезапустить и обновить",
+    "Updating… your terminals keep running.": "Обновление… терминалы продолжают работать.",
+    "Update finch-core": "Обновить finch-core",
+    "Not checked: a build from source looks for no updates.": "Не проверялось: сборка из исходников не ищет обновлений.",
+    "Finch looks for both every hour and tells you in the corner. finch-core runs your terminals, so they keep running through its updates.": "Finch проверяет обе программы раз в час и сообщает в углу экрана. Терминалы работают в finch-core и не прерываются при его обновлении.",
+    "Usage data": "Данные об использовании",
+    "Share anonymous usage data": "Отправлять анонимную статистику",
+    "Once a day: which agents and features you use, how many spaces and tabs, your system and Finch's version. Never what's in your terminals, never names of files, folders or projects.": "Раз в день: какие агенты и функции вы используете, сколько пространств и вкладок, ваша система и версия Finch. Никогда — содержимое терминалов, названия файлов, папок и проектов.",
+    "What we send": "Что отправляется",
+    "This build never sends: it's built from source. You can still see what a release would send.": "Эта сборка ничего не отправляет. Можно посмотреть, что отправлял бы релиз.",
+    "Exactly what leaves your computer, word for word.": "Ровно то, что покидает компьютер, слово в слово.",
+    "Nothing is collected or sent while it's off.": "Пока выключено, ничего не собирается и не отправляется.",
+    "Sent as is, soon.": "Скоро будет отправлено как есть.",
+    "Today so far": "Сегодня на данный момент",
+    "A draft: it changes until the day ends (UTC), then goes out once.": "Черновик: меняется до конца дня (UTC), потом отправляется один раз.",
+    "Jan": "янв",
+    "Feb": "фев",
+    "Mar": "мар",
+    "Apr": "апр",
+    "May": "мая",
+    "Jun": "июн",
+    "Jul": "июл",
+    "Aug": "авг",
+    "Sep": "сен",
+    "Oct": "окт",
+    "Nov": "ноя",
+    "Dec": "дек",
+    "What happened? What did you expect?": "Что произошло? Чего вы ожидали?",
+    "Email (optional)": "Email (необязательно)",
+    "Up to 3 screenshots.": "До 3 скриншотов.",
+    "Add screenshot": "Добавить скриншот",
+    "Send feedback": "Отправить отзыв",
+    "This build was made from source and doesn't send feedback. Use a release build.": "Эта сборка не отправляет отзывы.",
+    "Drafted by an agent: read it before sending": "Черновик составил агент: прочитайте перед отправкой",
+    "Sent. Thanks for helping us improve Finch.": "Отправлено. Спасибо, что помогаете улучшать Finch.",
+    "Your message (up to 4000 characters). Paste or drop screenshots, up to 3.": "Ваше сообщение (до 4000 символов). Вставьте или перетащите до 3 скриншотов.",
+    "Email: only if you want a reply": "Email — только если хотите ответ",
+    "What we send: exactly this JSON, plus the screenshots above. No logs or install ID.": "Отправляется ровно этот JSON и скриншоты выше. Без логов и идентификатора установки.",
+    "Sending…": "Отправка…",
+    "Send": "Отправить",
+    "Priority": "По важности",
+    "Grouped by space": "По пространствам",
+    "Needs you": "Ждёт вас",
+    "needs you": "ждёт вас",
+    "Working": "Работает",
+    "Idle": "Простаивает",
+    "Blocked": "Ждёт вас",
+    "Sort agents": "Сортировка агентов",
+    "Unpin": "Открепить",
+    "Pin to the top": "Закрепить сверху",
+    "Pinned": "Закреплено",
+    "No agent status yet. Agents show up here when they report their status. Older versions and agents inside tmux may not.": "Статусов агентов пока нет. Агенты появляются здесь, когда сообщают свой статус. Старые версии и агенты внутри tmux могут этого не делать.",
+    "Start an agent": "Запустить агента",
+    "not installed": "не установлен",
+    "Could not check installed agents": "Не удалось проверить установленных агентов",
+    "Checking installed agents…": "Проверяем установленных агентов…",
+    "↗ go to": "↗ перейти",
+    "↗ keep": "↗ оставить",
+    "Commit message": "Сообщение коммита",
+    "Not a git repository": "Не git-репозиторий",
+    "Cannot preview this diff (too large or unreadable)": "Не удалось показать дифф (слишком большой или нечитаемый)",
+    "Cannot preview this file (binary, too large, or unreadable)": "Не удалось показать файл (двоичный, слишком большой или нечитаемый)",
+    "Binary file · no text diff": "Двоичный файл · текстового диффа нет",
+    "Binary file changed": "Двоичный файл изменён",
+    "No text diff available": "Текстовый дифф недоступен",
+    "… (line truncated)": "… (строка обрезана)",
+    "Loading changes…": "Загружаем изменения…",
+    "No uncommitted changes": "Незакоммиченных изменений нет",
+    "No folder": "Нет папки",
+    "Showing the first 1,000 changed files": "Показаны первые 1000 изменённых файлов",
+    "Select a file to view its changes": "Выберите файл, чтобы увидеть изменения",
+    "Committing…": "Коммит…",
+    "Commit": "Закоммитить",
+    "Cannot list this folder": "Не удалось прочитать папку",
+    "cannot start sh: program not found": "не удалось запустить sh: программа не найдена",
+    "This file is no longer available": "Этот файл больше недоступен",
+    "Binary file · no text preview": "Двоичный файл · без текстового просмотра",
+    "Loading files…": "Загружаем файлы…",
+    "No files": "Файлов нет",
+    "File list limited to 500 entries per folder and 5,000 total": "Список ограничен 500 файлами на папку и 5000 всего",
+    "Loading file…": "Загружаем файл…",
+    "New worktree": "Новый worktree",
+    "Open worktree": "Открыть worktree",
+    "Remove worktree": "Удалить worktree",
+    "New worktree…": "Новый worktree…",
+    "Open worktree…": "Открыть worktree…",
+    "worktrees.directory must be a non-empty path.": "worktrees.directory должен быть непустым путём.",
+    "worktrees.directory must be an absolute path or start with ~/.": "worktrees.directory должен быть абсолютным путём или начинаться с ~/.",
+    "git rev-parse failed.": "git rev-parse завершился с ошибкой.",
+    "filter worktrees": "фильтр worktree",
+    "branch name": "имя ветки",
+    "Type a branch name.": "Введите имя ветки.",
+    "git worktree add failed.": "git worktree add завершился с ошибкой.",
+    "git status failed.": "git status завершился с ошибкой.",
+    "It changed since this opened. Enter again removes it anyway.": "Он изменился, пока окно было открыто. Повторный Enter всё равно удалит его.",
+    "git worktree list failed.": "git worktree list завершился с ошибкой.",
+    "This worktree is locked.": "Этот worktree заблокирован.",
+    "The space's terminals haven't stopped yet. Press Enter to check again.": "Терминалы пространства ещё не остановились. Нажмите Enter, чтобы проверить снова.",
+    "git worktree remove failed.": "git worktree remove завершился с ошибкой.",
+    "main checkout": "основной checkout",
+    "This folder": "Эта папка",
+    "No matching worktrees.": "Подходящих worktree нет.",
+    "↑↓ choose · ↵ open · esc close": "↑↓ выбор · ↵ открыть · esc закрыть",
+    "This is the repository's main checkout, not a worktree.": "Это основной checkout репозитория, а не worktree.",
+    "It has uncommitted changes: they will be lost.": "В нём есть незакоммиченные изменения: они будут потеряны.",
+    "esc close": "esc закрыть",
+    "↵ remove · esc cancel": "↵ удалить · esc отмена",
+    "↵ create · esc cancel": "↵ создать · esc отмена",
+    "Finch needs finch-core": "Finch нужен finch-core",
+    "finch-core runs your terminals and agents, and keeps them alive when this window closes. Finch couldn't find it on this computer.": "finch-core запускает ваши терминалы и агентов и сохраняет их, когда окно закрыто. Finch не нашёл его на этом компьютере.",
+    "Finch can't connect to finch-core": "Finch не может подключиться к finch-core",
+    "Once you've resolved this, try again.": "Когда исправите, попробуйте снова.",
+    "Finch needs a newer finch-core": "Finch нужна более новая версия finch-core",
+    "Or update it yourself: hc update": "Или обновите сами: hc update",
+    "This Finch is older than your finch-core": "Эта версия Finch старше вашего finch-core",
+    "Install it for me": "Установить за меня",
+    "I have it somewhere…": "Он у меня уже есть…",
+    "Retry": "Повторить",
+    "Quit": "Выйти",
+    "What's New": "Что нового",
+    "Check for Updates…": "Проверить обновления…",
+    "Settings…": "Настройки…",
+    "Hide Finch": "Скрыть Finch",
+    "Hide Others": "Скрыть остальные",
+    "Show All": "Показать все",
+    "File": "Файл",
+    "New Tab": "Новая вкладка",
+    "New Space": "Новое пространство",
+    "Split Right": "Разделить вправо",
+    "Split Down": "Разделить вниз",
+    "Rename Tab…": "Переименовать вкладку…",
+    "Rename Space…": "Переименовать пространство…",
+    "Close Pane": "Закрыть панель",
+    "Close Tab": "Закрыть вкладку",
+    "Close Space": "Закрыть пространство",
+    "Edit": "Правка",
+    "Find…": "Найти…",
+    "View": "Вид",
+    "Next Layout": "Следующая раскладка",
+    "Toggle Sidebar": "Показать/скрыть боковую панель",
+    "Actual Size": "Реальный размер",
+    "Zoom In": "Увеличить",
+    "Zoom Out": "Уменьшить",
+    "Command Palette…": "Палитра команд…",
+    "Minimize": "Свернуть",
+    "Go to Tab…": "Перейти к вкладке…",
+    "Next Tab": "Следующая вкладка",
+    "Previous Tab": "Предыдущая вкладка",
+    "Next Space": "Следующее пространство",
+    "Previous Space": "Предыдущее пространство",
+    "Next Agent": "Следующий агент",
+    "Previous Agent": "Предыдущий агент",
+    "Help": "Справка",
+    "Undo": "Отменить",
+    "Redo": "Повторить",
+    "Cut": "Вырезать",
+    "Select All": "Выбрать всё",
+    "Keyboard Shortcuts": "Сочетания клавиш",
+    "Send Feedback…": "Отправить отзыв…",
+    "commands": "команды",
+    "1 agent": "1 агент",
+    "0 agents": "0 агентов",
+    "About": "О программе",
+    "About Finch": "О программе Finch",
+    "Full": "Полная",
+    "Closed network (GigaCode only)": "Закрытый контур (только GigaCode)",
+    "Runs your terminals and agents; ships inside the app.": "Запускает терминалы и агентов; поставляется внутри приложения.",
+    "Finch doesn't update itself. To update, download the new version and install it over this one; your terminals keep running.": "Finch не обновляется сам. Чтобы обновиться, скачайте новую версию и установите её поверх этой; терминалы продолжат работать.",
+    "Agent chat": "Чат агента",
+    "Message the agent… (⌘↵ or Ctrl+↵ sends)": "Сообщение агенту… (⌘↵ или Ctrl+↵ — отправить)",
+    "Latest": "К последним",
+    "Show earlier": "Показать ранее",
+    "Older messages are in the log file": "Более ранние сообщения — в файле лога",
+    "Start of the session": "Начало сессии",
+    "New session": "Новая сессия",
+    "Context compressed": "Контекст сжат",
+    "Thinking": "Размышления",
+    "Input": "Вход",
+    "Result": "Результат",
+    "Error": "Ошибка",
+    "(empty)": "(пусто)",
+    "Answer:": "Ответ:",
+    "Stop": "Стоп",
+    "This chat isn't tied to a terminal. Open it from an agent's terminal with ⌘⇧J (Ctrl+Shift+J).": "Этот чат не привязан к терминалу. Откройте его из терминала агента: ⌘⇧J (Ctrl+Shift+J).",
+    "Chat view supports Claude Code and GigaCode (and Qwen Code). This terminal runs something else.": "Чат поддерживает Claude Code и GigaCode (и Qwen Code). В этом терминале запущено что-то другое.",
+    "Waiting for the agent's session log. It appears after the first message.": "Ждём лог сессии агента. Он появится после первого сообщения.",
+    "Chat": "Чат",
+    "Open the chat with the agent": "Открывать чат вместе с агентом",
+    "Session ended": "Сессия завершена",
+    "The agent's session has ended. Close this chat, or start the agent again.": "Сессия агента завершена. Закройте чат или запустите агента снова."
+  },
+  "patterns": [
+    [
+      "(.+)  commands",
+      "$1  команды"
+    ],
+    [
+      "(\\d*[02-9])?1 agents",
+      "${1}1 агент"
+    ],
+    [
+      "(\\d*1[0-9]) agents",
+      "$1 агентов"
+    ],
+    [
+      "(\\d*[2-4]) agents",
+      "$1 агента"
+    ],
+    [
+      "(\\d+) agents",
+      "$1 агентов"
+    ],
+    [
+      "Focus pane (.+)",
+      "Фокус на панель $1"
+    ],
+    [
+      "Swap pane (.+)",
+      "Поменять панель местами: $1"
+    ],
+    [
+      "Nothing matches \"(.*)\"\\. Places are in the picker\\.",
+      "Ничего не найдено по «$1». Места — в выборе мест."
+    ],
+    [
+      "Default \\((.+)\\)",
+      "По умолчанию ($1)"
+    ],
+    [
+      "Bold text is (.+) \\(font_weight_bold in settings\\.json\\)\\.",
+      "Жирный текст: $1 (font_weight_bold в settings.json)."
+    ],
+    [
+      "Updated (.+); its terminals kept running\\.",
+      "$1 обновлена; терминалы продолжили работу."
+    ],
+    [
+      "Renamed (.+) to (.+)\\.",
+      "$1 переименована в $2."
+    ],
+    [
+      "Removed (.+); its terminals keep running there\\.",
+      "$1 удалена; терминалы там продолжают работать."
+    ],
+    [
+      "Remove (.+)\\? Its terminals keep running there\\.",
+      "Удалить $1? Терминалы там продолжат работать."
+    ],
+    [
+      "Connected · (.+)",
+      "Подключено · $1"
+    ],
+    [
+      "Up to date\\.(.*)",
+      "Последняя версия.$1"
+    ],
+    [
+      " Checked at (.+)\\.",
+      " Проверено в $1."
+    ],
+    [
+      "(.+) is ready\\. Restart to switch now; it also switches when you quit\\.",
+      "$1 готова. Перезапустите, чтобы перейти сейчас; иначе переход будет при выходе."
+    ],
+    [
+      " (.+) is available\\.",
+      " Доступна $1."
+    ],
+    [
+      "Managed by (.+): update it there\\.(.*)",
+      "Управляется $1: обновляйте там.$2"
+    ],
+    [
+      "The update failed: (.+)",
+      "Обновление не удалось: $1"
+    ],
+    [
+      "(.+) is ready\\. Your terminals keep running through it\\.",
+      "$1 готова. Терминалы продолжат работу во время обновления."
+    ],
+    [
+      "Off for now: (.+) is set where Finch started\\.",
+      "Сейчас выключено: при запуске Finch задано $1."
+    ],
+    [
+      "Waiting to send: (.+)",
+      "Ожидает отправки: $1"
+    ],
+    [
+      "Last sent: (.+)",
+      "Последняя отправка: $1"
+    ],
+    [
+      "Sent (.+)\\.",
+      "Отправлено $1."
+    ],
+    [
+      "Sort agents: Priority",
+      "Сортировка агентов: по важности"
+    ],
+    [
+      "Sort agents: Grouped by space",
+      "Сортировка агентов: по пространствам"
+    ],
+    [
+      "Sort agents: (.+)",
+      "Сортировка агентов: $1"
+    ],
+    [
+      "Cannot preview this diff \\(too large or unreadable\\): (.+)",
+      "Не удалось показать дифф (слишком большой или нечитаемый): $1"
+    ],
+    [
+      "Commit failed: (.+)",
+      "Коммит не удался: $1"
+    ],
+    [
+      "Agents on (.+) stop when you disconnect",
+      "Агенты на $1 останавливаются при отключении"
+    ],
+    [
+      "Run this on (.+) once:",
+      "Один раз выполните на $1:"
+    ],
+    [
+      "(.+) is a Mac: allow its folders once",
+      "$1 — это Mac: один раз разрешите доступ к папкам"
+    ],
+    [
+      "Open the setting on (.+)",
+      "Открыть настройку на $1"
+    ],
+    [
+      "Send back to (.+)",
+      "Вернуть в $1"
+    ],
+    [
+      "new space on (.+)",
+      "новое пространство на $1"
+    ],
+    [
+      "New space on (.+)",
+      "Новое пространство на $1"
+    ],
+    [
+      "(.+) needs a login: run (.+)\\. Click for Copy\\.",
+      "$1: нужен вход, выполните $2. Нажмите, чтобы скопировать."
+    ],
+    [
+      "(.+) needs a login: run",
+      "$1: нужен вход, выполните"
+    ],
+    [
+      "Couldn't check submodule (.+)\\.",
+      "Не удалось проверить сабмодуль $1."
+    ],
+    [
+      "This worktree is locked: (.+)",
+      "Этот worktree заблокирован: $1"
+    ],
+    [
+      "(\\d+)/(\\d+) checkouts",
+      "$1/$2 checkout'ов"
+    ],
+    [
+      "(.+) is not in a git repository\\.",
+      "$1 не в git-репозитории."
+    ],
+    [
+      "Remove worktree (.+)\\?",
+      "Удалить worktree $1?"
+    ],
+    [
+      "Open worktree(.*)",
+      "Открыть worktree$1"
+    ],
+    [
+      "New worktree(.*)",
+      "Новый worktree$1"
+    ],
+    [
+      "Closes the space and deletes (.+)\\. The branch stays\\.",
+      "Закрывает пространство и удаляет $1. Ветка остаётся."
+    ],
+    [
+      "A new space on a checkout in (.+)\\. A branch that exists is checked out; a new one starts from here\\.",
+      "Новое пространство на checkout в $1. Существующая ветка будет извлечена, новая начнётся отсюда."
+    ],
+    [
+      "Submodule (.+) has commits that aren't pushed anywhere: they will be lost\\.",
+      "В сабмодуле $1 есть неотправленные коммиты: они будут потеряны."
+    ],
+    [
+      "Couldn't add (.+) here: it needs you to answer something \\(a password, a new host key, or installing finch-core there\\)\\. Run `hc machine add (.+)` in a terminal\\. `hc machine --help` shows the options\\.",
+      "Не удалось добавить $1: требуется ваш ответ (пароль, новый ключ хоста или установка finch-core). Выполните `hc machine add $2` в терминале. Параметры: `hc machine --help`."
+    ],
+    [
+      "Theme: (.+)",
+      "Тема: $1"
+    ],
+    [
+      "Layout: (.+)",
+      "Раскладка: $1"
+    ],
+    [
+      "Yours is (.+); this Finch needs (.+) or newer\\. Updating keeps your terminals running\\.",
+      "У вас версия $1, а Finch нужна $2 или новее. Терминалы при обновлении продолжат работать."
+    ],
+    [
+      "Your finch-core can't do everything this Finch needs \\((.+)\\)\\. Updating keeps your terminals running\\.",
+      "Ваш finch-core умеет не всё, что нужно Finch ($1). Терминалы при обновлении продолжат работать."
+    ],
+    [
+      "Your finch-core speaks a newer protocol \\(generation (.+)\\) than this Finch understands\\. Update Finch; your terminals keep running\\.",
+      "Ваш finch-core использует более новый протокол (поколение $1), чем понимает эта версия Finch. Обновите Finch, терминалы продолжат работать."
+    ],
+    [
+      "Install it for me puts it in (.+) \\(with hc\\), like its own installer: (.+)",
+      "«Установить за меня» положит его в $1 (вместе с hc), как это делает его установщик: $2"
+    ],
+    [
+      "Update Finch: (.+)",
+      "Обновить Finch: $1"
+    ],
+    [
+      "(.+) finished",
+      "$1 закончил"
+    ],
+    [
+      "(.+) needs you",
+      "$1 ждёт вас"
+    ],
+    [
+      "Cannot read the session log: (.*)",
+      "Не удалось прочитать лог сессии: $1"
+    ]
+  ]
+}
