@@ -322,6 +322,14 @@
       },
       "edge": "bottom",
       "align": "end"
+    },
+    {
+      "id": "better-alerts",
+      "content": {
+        "mod": "better-alerts"
+      },
+      "edge": "bottom",
+      "align": "end"
     }
   ]
 }

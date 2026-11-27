@@ -42,6 +42,15 @@ function finchViewRow(t, cx) {
         .child(label)));
 }
 
+// Finch: one task to several agents (fan-out), as in Finch's own + menu.
+function finchFanoutRow(t) {
+  return h_flex().id("pa-fanout").h(29).px(9).gap(10).items_center().rounded(6).cursor_pointer().text_color(t.foreground)
+    .hover(s => s.bg(t.hover))
+    .on_click(() => { closeOverlay(props().overlay); run("tab.new", { mod: "fanout", name: "Fan-out" }); })
+    .child(div().w(14).text_size(13).child("⑂"))
+    .child(div().flex_1().text_size(12.8).child(L("Several agents…", "Несколько агентов…")));
+}
+
 export default class NewMenu extends View {
   init(_props, cx) {
     const machine = spaces().find(s => props()?.space ? s.id === props().space : s.active)?.machine;
@@ -108,6 +117,7 @@ export default class NewMenu extends View {
             .child(this.failed ? L("Could not check installed agents", "Не удалось проверить агентов") : L("Checking installed agents…", "Проверяю установленных агентов…")))))
         .child(div().h(1).mx(4).my(5).flex_none().bg(t.border))
         .child(finchViewRow(t))
+        .child(finchFanoutRow(t))
         .child(this.projectRow("terminal", pxIcon("terminal"), L("Open terminal", "Открыть терминал"), () => newTerminal("tab", space?.id), shortcut("tab.new")))
         .child(this.projectRow("worktree", pxIcon("branch"), L("Create worktree…", "Создать worktree…"), worktree("new"), "", Boolean(space)))
         .child(this.projectRow("worktree-open", pxIcon("folder"), L("Open worktree…", "Открыть worktree…"), worktree("open"), "", Boolean(space))));
@@ -135,6 +145,7 @@ export default class NewMenu extends View {
           () => newTerminal("tab", space?.id, a.run, a.name), a.installed ? (i < 9 ? String(i + 1) : "") : L("not installed", "не установлен"), a.installed)))
         .when(this.failed || this.agents.length === 0, el => el.child(div().px(9).py(6).text_color(t.dim).child(this.failed ? L("Could not check installed agents", "Не удалось проверить агентов") : L("Checking installed agents…", "Проверяю установленных агентов…")))))
       .child(finchViewRow(t))
+      .child(finchFanoutRow(t))
       .child(div().h(1).mx(4).my(5).bg(t.border))
       .child(this.row("space", (agency() ? svg(px("plus")).size(15) : div().w(14).child("+")), L("New space", "Новое пространство"), () => run("space.new"), shortcut("space.new")))
       .child(this.row("worktree", svg(agency() ? px("branch") : "mods/workspace-chrome/branch.svg").size(agency() ? 15 : 14), L("Create worktree…", "Создать worktree…"), () => openOverlay({ mod: "worktree", kind: "dialog", width: 460, height: 280, props: { space: space?.id, folder: props()?.space ? workspace(space?.id).cwd : panes().find(p => p.focused)?.cwd, action: "new" } }), "", Boolean(space)))

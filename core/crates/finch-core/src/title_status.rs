@@ -13,15 +13,30 @@ use ghostty_vt::StatusReport;
 /// The apps this applies to, by the program's name or a word in its command.
 const APPS: &[(&str, &str)] = &[("gigacode-qa", "gigacode-qa"), ("gigacode", "gigacode"), ("gcli", "gigacode"), ("qwen", "qwen")];
 
-/// Which title-reporting app runs in `t` now, if any.
+/// Which title-reporting app runs in `t` now, if any: by the program's name,
+/// or, for a script runtime (node, bun), by any folder or file in the script's
+/// path (`~/.gigacode/bin/cli.js`, `node_modules/@x/gigacode-cli/dist/index.js`).
 fn app(t: &Terminal) -> Option<&'static str> {
     let fg = t.foreground.as_ref()?;
-    let words = std::iter::once(fg.name.as_str()).chain(fg.argv.iter().take(3).map(String::as_str));
-    for word in words {
-        let base = word.rsplit(['/', '\\']).next().unwrap_or(word).to_ascii_lowercase();
-        for (needle, app) in APPS {
-            if base.starts_with(needle) || (word.contains("/qwen-code/") && *app == "qwen") {
-                return Some(app);
+    let base = |w: &str| w.rsplit(['/', '\\']).next().unwrap_or(w).trim_start_matches('.').to_ascii_lowercase();
+    let named = |w: &str| APPS.iter().find(|(needle, _)| w.starts_with(needle)).map(|(_, app)| *app);
+    if let Some(app) = named(&base(&fg.name)) {
+        return Some(app);
+    }
+    let runtime = matches!(base(&fg.name).as_str(), "node" | "nodejs" | "bun" | "deno")
+        || fg.argv.first().is_some_and(|a| matches!(base(a).as_str(), "node" | "nodejs" | "bun" | "deno"));
+    for word in fg.argv.iter().take(4) {
+        if let Some(app) = named(&base(word)) {
+            return Some(app);
+        }
+        if word.contains("/qwen-code/") {
+            return Some("qwen");
+        }
+        if runtime {
+            for part in word.split(['/', '\\']) {
+                if let Some(app) = named(&part.trim_start_matches('.').to_ascii_lowercase()) {
+                    return Some(app);
+                }
             }
         }
     }
@@ -64,18 +79,33 @@ pub fn infer(t: &Terminal, title: &str) -> Option<StatusReport> {
     })
 }
 
-/// When the screen was last looked at, per terminal: at most once a second.
-static LOOKED: std::sync::Mutex<Option<std::collections::HashMap<u32, u64>>> = std::sync::Mutex::new(None);
+/// Lines (lowercased) of Qwen Code / GigaCode dialogs that wait for the person,
+/// in English and Russian: tool confirmations, folder trust, questions.
+const ASKING: &[&str] = &[
+    "waiting for user confirmation",
+    "ожидание подтверждения от пользователя",
+    "yes, allow once",
+    "да, разрешить один раз",
+    "allow execution of",
+    "разрешить выполнение",
+    "apply this change?",
+    "применить это изменение?",
+    "do you want to proceed?",
+    "вы хотите продолжить?",
+    "do you trust this folder",
+    "enter to select",
+    "enter для выбора",
+    "enter to submit · esc",
+    "enter для отправки · esc",
+    "enter to confirm, esc",
+    "enter для подтверждения, esc",
+];
 
-/// Whether it's time to read terminal `id`'s screen again.
-pub fn due(id: u32, now_ms: u64) -> bool {
-    let mut map = LOOKED.lock().unwrap();
-    let map = map.get_or_insert_with(Default::default);
-    if map.get(&id).is_some_and(|at| now_ms.saturating_sub(*at) < 1000) {
-        return false;
-    }
-    map.insert(id, now_ms);
-    true
+/// Whether `t` runs an agent whose screen tells its state, and no program
+/// reports for it over 7501.
+pub fn reads_screen(t: &Terminal) -> bool {
+    let Some(app) = app(t) else { return false };
+    t.status.as_ref().is_none_or(|s| s.app.is_empty() || s.app == app)
 }
 
 /// The status the visible screen of a Qwen Code / GigaCode CLI terminal shows,
@@ -91,16 +121,18 @@ pub fn infer_screen(t: &Terminal, rows: &[String]) -> Option<StatusReport> {
         return None;
     }
     let tail: Vec<String> = rows.iter().map(|r| r.trim().to_lowercase()).filter(|r| !r.is_empty()).collect();
-    let tail = &tail[tail.len().saturating_sub(20)..];
-    let has = |needle: &str| tail.iter().any(|r| r.contains(needle));
-    let asking = has("waiting for user confirmation")
-        || has("ожидание подтверждения от пользователя")
-        || has("do you trust this folder")
-        || (has("yes, allow once") && (has("apply this change") || has("allow execution") || has("do you want to proceed") || has("shell command execution")));
+    let tail = &tail[tail.len().saturating_sub(16)..];
+    let asking = tail.iter().any(|r| ASKING.iter().any(|needle| r.contains(needle)));
+    // The loading line: a braille spinner, or "(esc to cancel, 5s)".
+    let spinning = tail.iter().rev().take(10).any(|r| {
+        r.chars().next().is_some_and(|c| ('\u{2801}'..='\u{28FF}').contains(&c))
+            || r.contains("(esc to cancel")
+            || r.contains("(esc для отмены")
+    });
     let was = t.status.as_ref().map(|s| s.state.as_str());
     let state = if asking {
         "blocked"
-    } else if tail.iter().rev().take(8).any(|r| r.contains("esc to cancel")) {
+    } else if spinning {
         "working"
     } else if matches!(was, Some("working")) {
         "done"
@@ -166,6 +198,26 @@ mod tests {
         crate::status::apply(&mut t, &r);
         let r = infer_screen(&t, &rows(&["⠏ Ожидание подтверждения от пользователя..."]));
         assert!(r.is_none(), "still blocked");
+        // Answered: the spinner runs again, then the prompt comes back.
+        let r = infer_screen(&t, &rows(&["◆ Запускаю", "⠋ Думаю… (esc для отмены, 2с)"])).expect("working again");
+        assert_eq!(r.state, "working");
+        crate::status::apply(&mut t, &r);
+        let r = infer_screen(&t, &rows(&["◆ Готово", ">   Введите сообщение"])).expect("done");
+        assert_eq!(r.state, "done");
+        crate::status::apply(&mut t, &r);
+        let r = infer_screen(&t, &rows(&["Разрешить выполнение: 'npm'?", "› 1. Да, разрешить один раз"])).expect("asks");
+        assert_eq!(r.state, "blocked");
+    }
+
+    #[test]
+    fn a_runtime_running_a_gigacode_script_is_gigacode() {
+        let t = terminal("node", &["node", "/Users/me/.gigacode/lib/dist/cli.js"]);
+        assert!(reads_screen(&t));
+        let qa = terminal("node", &["node", "/opt/node_modules/@corp/gigacode-qa/dist/index.js"]);
+        assert_eq!(infer_screen(&qa, &["> ".to_string()]).map(|r| r.app), Some("gigacode-qa".to_string()));
+        // An editor opening a GigaCode file is not GigaCode.
+        let vim = terminal("vim", &["vim", "/Users/me/.gigacode/settings.json"]);
+        assert!(!reads_screen(&vim));
     }
 
     #[test]

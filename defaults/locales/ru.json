@@ -425,7 +425,7 @@
     "The same, lighter: fewer panels.": "То же, но легче: меньше панелей.",
     "All the Better mods in one window: spaces and agents on the left, files and changes on the right.": "Все моды Better в одном окне: пространства и агенты слева, файлы и изменения справа.",
     "Mods and layouts work without the internet. PA-Advanced uses python3 for file operations; its search uses ripgrep when it's installed.": "Моды и раскладки работают без интернета. PA-Advanced использует python3 для операций с файлами; поиск использует ripgrep, если он установлен, иначе grep.",
-    "default model": "модель по умолч.",
+    "default model": "модель по умолчанию",
     "Markdown editor": "Редактор Markdown",
     "Open a file…": "Открыть файл…",
     "Hide preview": "Скрыть предпросмотр",
@@ -535,7 +535,12 @@
     "GigaCode (project)": "GigaCode (проект)",
     "Qwen Code (project)": "Qwen Code (проект)",
     "Claude Code (project)": "Claude Code (проект)",
-    "Project (.agents/skills)": "Проект (.agents/skills)"
+    "Project (.agents/skills)": "Проект (.agents/skills)",
+    "Model": "Модель",
+    "Switch the model:": "Сменить модель:",
+    "No models listed; type /model in the terminal.": "Список моделей не найден; наберите /model в терминале.",
+    "One task to several agents, each on its own branch and worktree, so they don't touch each other's files. Add agents below; one agent can run several times, each copy on its own model (click the model to change it).": "Одна задача нескольким агентам, каждому — своя ветка и worktree, чтобы они не трогали файлы друг друга. Добавьте агентов ниже; один агент может работать в нескольких копиях, каждая на своей модели (клик по модели меняет её).",
+    "not a git repository": "это не git-репозиторий"
   },
   "patterns": [
     [

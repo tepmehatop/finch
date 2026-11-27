@@ -206,6 +206,16 @@ impl Core {
                 if foreground_changed {
                     self.emit(&mut st, "foreground", id, serde_json::to_value(&now).unwrap_or_default());
                 }
+                // Finch: agents that show their state only on screen (GigaCode, Qwen
+                // Code without title glyphs) are read here, so a state that stays
+                // on screen after the output stops is seen too.
+                let report = st.reg.terminals.get(&id).filter(|t| crate::title_status::reads_screen(t)).and_then(|t| {
+                    let rows = st.screens.get(&id)?.screen_rows();
+                    crate::title_status::infer_screen(t, &rows)
+                });
+                if let Some(report) = report {
+                    self.report_status(&mut st, id, &[report]);
+                }
             }
         }
     }

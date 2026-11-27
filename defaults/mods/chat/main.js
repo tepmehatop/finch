@@ -44,6 +44,14 @@ function kindOf(term) {
   return null;
 }
 
+// Session logs only: Qwen Code keeps <id>.runtime.json and <id>.title.json beside
+// <id>.jsonl; older forks write session-<time>.json (or <id>.json) per session.
+function isLog(path) {
+  const name = path.split("/").pop();
+  if (name.endsWith(".jsonl")) return true;
+  return name.endsWith(".json") && !/\.(runtime|title|meta|lock|state)\.json$/.test(name) && !/^(logs|meta|settings)\.json$/.test(name);
+}
+
 // A value given after `flag` in the agent's command (`--session-id x`, `-m x`).
 function argAfter(argv, ...flags) {
   for (let i = 0; i < (argv?.length ?? 0) - 1; i++) if (flags.includes(argv[i])) return argv[i + 1];
@@ -85,7 +93,7 @@ export default class Chat extends View {
       if (window()?.visible === false) return;
       if (this.follow(cx)) cx.notify();
     });
-    cx.timer.every(6000, (cx) => {
+    cx.timer.every(2000, (cx) => {
       if (window()?.visible === false) return;
       cx.spawn(async (cx) => { if (await this.relocate()) cx.notify(); });
     });
@@ -102,15 +110,50 @@ export default class Chat extends View {
     const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd }).catch(() => null);
     if (top?.code === 0 && top.stdout.trim()) roots.unshift(top.stdout.trim());
     if (this.kind === "claude") return { roots, dirs: roots.map((r) => ({ dir: `~/.claude/projects/${sanitize(r)}`, depth: 0 })) };
-    const base = this.kind === "qwen" ? "~/.qwen" : "~/.gigacode";
+    const bases = this.bases();
     const dirs = [];
-    for (const r of roots) {
-      dirs.push({ dir: `${base}/projects/${sanitize(r)}/chats`, depth: 0 });
-      const h = await exec("sh", ["-c", 'printf %s "$1" | (shasum -a 256 2>/dev/null || sha256sum) | cut -d" " -f1', "sh", r]).catch(() => null);
-      const hash = h?.stdout.trim();
-      if (hash) dirs.push({ dir: `${base}/tmp/${hash}/chats`, depth: 0 });
+    for (const base of bases) {
+      for (const r of roots) {
+        dirs.push({ dir: `${base}/projects/${sanitize(r)}/chats`, depth: 0 });
+        const h = await exec("sh", ["-c", 'printf %s "$1" | (shasum -a 256 2>/dev/null || sha256sum) | cut -d" " -f1', "sh", r]).catch(() => null);
+        const hash = h?.stdout.trim();
+        if (hash) dirs.push({ dir: `${base}/tmp/${hash}/chats`, depth: 0 });
+      }
     }
-    return { roots, dirs, base };
+    return { roots, dirs, base: bases[0] };
+  }
+
+  // Where this agent keeps its files: GigaCode in ~/.gigacode (a fork that kept
+  // Qwen's folder: ~/.qwen), Qwen Code in ~/.qwen.
+  bases() {
+    return this.kind === "qwen" ? ["~/.qwen"] : ["~/.gigacode", "~/.qwen"];
+  }
+
+  // The session the agent in this terminal runs, from the file Qwen Code (and
+  // GigaCode built on it) keeps per process: <base>/sessions/<pid>.json. The
+  // process is the terminal's foreground program or its child (a relaunch).
+  async sessionOf(term) {
+    const fg = term.foreground?.pid;
+    if (!fg || this.kind === "claude") return null;
+    // Read every time: /clear starts a new session in the same process.
+    this.ppids ??= new Map();
+    for (const base of this.bases()) {
+      for (const f of recentFiles(`${base}/sessions`, ".json", 0, 40)) {
+        let d;
+        try { d = JSON.parse((await readTextFile(f.path)) ?? "{}"); } catch { continue; }
+        if (!d?.sessionId || !d.pid) continue;
+        if (d.pid !== fg && !this.ppids.has(d.pid)) {
+          const r = await exec("ps", ["-o", "ppid=", "-p", String(d.pid)]).catch(() => null);
+          this.ppids.set(d.pid, r?.code === 0 ? Number(r.stdout.trim()) : 0);
+        }
+        if (d.pid === fg || this.ppids.get(d.pid) === fg) {
+          this.sid = d.sessionId;
+          return d.sessionId;
+        }
+      }
+    }
+    this.sid = null;
+    return null;
   }
 
   candidates() {
@@ -118,7 +161,7 @@ export default class Chat extends View {
     for (const { dir, depth } of this.dirs?.dirs ?? []) {
       for (const suffix of [".jsonl", ".json"]) out.push(...recentFiles(dir, suffix, depth, 20));
     }
-    return out.sort((a, b) => b.modified - a.modified);
+    return out.filter((f) => isLog(f.path)).sort((a, b) => b.modified - a.modified);
   }
 
   // Which log is this terminal's session: the one it was started with (--session-id),
@@ -127,16 +170,27 @@ export default class Chat extends View {
     const manual = (shared(MANUAL) ?? {})[this.address];
     if (manual) return manual;
     const files = this.candidates();
-    const id = argAfter(term.argv, "--session-id", "--resume") ?? argAfter(term.foreground?.argv, "--session-id", "--resume");
+    const id = this.sid ?? argAfter(term.argv, "--session-id", "--resume") ?? argAfter(term.foreground?.argv, "--session-id", "--resume");
     if (id) {
       const own = files.find((f) => f.path.includes(id));
-      if (own) return own.path;
+      // A known session: its log or nothing yet (it appears with the first message).
+      if (own || this.sid) return own?.path ?? null;
     }
     const claims = shared(CLAIMS) ?? {};
     const live = new Set(terminals().map((t) => t.address));
     const free = files.filter((f) => !claims[f.path] || claims[f.path] === this.address || !live.has(claims[f.path]));
-    const since = (term.created_ms ?? 0) - 10000;
-    return (free.find((f) => f.modified >= since) ?? free[0])?.path ?? null;
+    // Another session's older log is never shown: only one written since this agent started.
+    const since = (this.startedMs(term) ?? 0) - 5000;
+    return free.find((f) => f.modified >= since)?.path ?? null;
+  }
+
+  // When the agent in this terminal started (the foreground program's start, else the terminal's).
+  startedMs(term) {
+    if (term.foreground?.pid !== this.fgPid) {
+      this.fgPid = term.foreground?.pid;
+      this.fgSeen = Date.now();
+    }
+    return Math.max(term.created_ms ?? 0, this.fgPid ? this.fgSeen - 2000 : 0);
   }
 
   claim(path) {
@@ -164,6 +218,7 @@ export default class Chat extends View {
     }
     this.dirs = await this.places(term);
     this.model = argAfter(term.argv, "-m", "--model") ?? argAfter(term.foreground?.argv, "-m", "--model") ?? (await this.defaultModel());
+    await this.sessionOf(term);
     const path = this.pick(term);
     if (!path) {
       this.note = "waiting";
@@ -174,7 +229,7 @@ export default class Chat extends View {
 
   async defaultModel() {
     if (this.kind === "claude") return null;
-    const base = this.kind === "qwen" ? "~/.qwen" : "~/.gigacode";
+    const base = this.bases()[0];
     try {
       const d = JSON.parse((await readTextFile(`${home()}${base.slice(1)}/settings.json`)) ?? "{}");
       return typeof d.model === "string" ? d.model : d.model?.name ?? null;
@@ -267,6 +322,7 @@ export default class Chat extends View {
     }
     const term = this.term();
     if (!term || (shared(MANUAL) ?? {})[this.address]) return false;
+    await this.sessionOf(term);
     const next = this.pick(term);
     if (!next || next === this.path) return false;
     const mine = this.candidates().find((f) => f.path === this.path);
@@ -316,6 +372,45 @@ export default class Chat extends View {
     this.atEnd = true;
     // Child 0 is the "Show earlier" row; the blocks follow it.
     this.scroll.scroll_to_item(this.blocks.length);
+  }
+
+  // The models the agent can switch to: GigaCode's from its token file (as the
+  // + menu lists them), Claude Code's aliases.
+  async listModels() {
+    if (this.kind === "claude") return ["opus", "sonnet", "haiku"];
+    const names = [];
+    for (const base of this.bases()) {
+      try {
+        const cfg = JSON.parse((await readTextFile(`${home()}${base.slice(1)}/gigacode_token.json`)) ?? "{}").config ?? {};
+        names.push(...[...(cfg.chat?.models ?? []), ...(cfg.agent?.models ?? [])].map((m) => m?.model ?? m?.name ?? m?.id));
+      } catch {}
+      try {
+        const st = JSON.parse((await readTextFile(`${home()}${base.slice(1)}/settings.json`)) ?? "{}");
+        for (const list of Object.values(st.modelProviders ?? {})) for (const m of Array.isArray(list) ? list : []) names.push(m?.id ?? m?.name);
+      } catch {}
+    }
+    if (this.model) names.unshift(this.model);
+    return [...new Set(names.filter((n) => typeof n === "string" && n))];
+  }
+
+  pickModel(cx) {
+    this.picking = !this.picking;
+    if (!this.picking) return cx.notify();
+    cx.spawn(async (cx) => {
+      this.models = await this.listModels();
+      cx.notify();
+    });
+  }
+
+  // Switches with the agent's own /model command; the next answers show the new one.
+  setModel(m, cx) {
+    this.picking = false;
+    if (!this.address || m === this.model) return cx.notify();
+    this.model = m;
+    cx.spawn(async (cx) => {
+      await hc(["send", this.address, `/model ${m}`]).catch(() => null);
+      cx.notify();
+    });
   }
 
   send(cx) {
@@ -467,7 +562,10 @@ export default class Chat extends View {
       .border_color(t.border)
       .bg(t.chrome)
       .child(div().text_size(13).font_semibold().text_color(t.foreground).child(name))
-      .when(Boolean(this.model), (el) => el.child(div().px(6).py(1).rounded(5).border_1().border_color(t.border).text_size(11).text_color(t.muted).child(this.model)))
+      .when(Boolean(this.model) || Boolean(term), (el) => el.child(h_flex().id("chat-model").gap(4).px(6).py(1).rounded(5).border_1().border_color(this.picking ? t.accent : t.border)
+        .text_size(11).text_color(t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground))
+        .on_click((_e, cx) => this.pickModel(cx))
+        .child(this.model ?? "Model").child(div().text_size(9).child("▾"))))
       .when(Boolean(statusLabel), (el) => el.child(h_flex().gap(5).items_center().child(div().size(6).rounded(3).bg(statusColor)).child(div().text_size(12).text_color(t.muted).child(statusLabel))))
       .child(div().flex_1())
       .when(Boolean(this.path), (el) => el.child(this.button(t, "chat-end", "Latest", (_e, cx) => { this.toEnd(); cx.notify(); })))
@@ -475,6 +573,13 @@ export default class Chat extends View {
       .when(Boolean(term), (el) => el
         .child(this.button(t, "chat-terminal", "Terminal", () => run("agent.view", { terminal: this.address, view: "terminal" })))
         .child(this.button(t, "chat-both", "Both", () => run("agent.view", { terminal: this.address, view: "both" }))));
+
+    const models = this.picking ? h_flex().flex_none().flex_wrap().gap(5).px(12).py(8).border_b(1).border_color(t.border).bg(t.chrome)
+      .child(div().text_size(11.5).text_color(t.dim).child("Switch the model:"))
+      .children((this.models ?? []).map((m) => div().id(`chat-m-${m}`).px(8).py(2).rounded(5).text_size(11.5).cursor_pointer()
+        .border_1().border_color(m === this.model ? t.accent : t.border).text_color(t.foreground).hover((s) => s.bg(t.hover))
+        .on_click((_e, cx) => this.setModel(m, cx)).child(m)))
+      .when(!(this.models ?? []).length, (el) => el.child(div().text_size(11.5).text_color(t.dim).child("No models listed; type /model in the terminal."))) : null;
 
     let body;
     if ((ended || this.note === "ended") && !this.blocks.length) body = this.empty(t, "The agent's session has ended. Close this chat, or start the agent again.");
@@ -546,6 +651,6 @@ export default class Chat extends View {
           .child(this.button(t, "chat-send", "Send", (_e, cx) => this.send(cx), true)),
       );
 
-    return v_flex().id("chat").size_full().bg(t.background).child(header).child(body).child(composer);
+    return v_flex().id("chat").size_full().bg(t.background).child(header).when(Boolean(models), (el) => el.child(models)).child(body).child(composer);
   }
 }

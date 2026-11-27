@@ -106,6 +106,9 @@ def strip_network_panels(layout_path: pathlib.Path, mods: set[str]):
     # Finch: background mods (auto-retry and the agent queue) run in every shipped layout.
     if not any((f.get("content") or {}).get("mod") == "retry" for f in node.get("floating", [])):
         node.setdefault("floating", []).append({"id": "retry", "content": {"mod": "retry"}, "edge": "bottom", "align": "end"})
+    # Finch: system notifications (when an agent needs you or finishes) in every layout.
+    if not any((f.get("content") or {}).get("mod") == "better-alerts" for f in node.get("floating", [])):
+        node.setdefault("floating", []).append({"id": "better-alerts", "content": {"mod": "better-alerts"}, "edge": "bottom", "align": "end"})
     # Finch: Finch's panels join the layout's side panel.
     FINCH_PANEL_IDS = ["review", "asks", "git-graph", "skillsgate", "mcp", "jira", "prompts", "github", "issues"]
     ROLE_PANELS = {"github": {"mod": "prodsovet", "props": {"role": "github"}}, "issues": {"mod": "prodsovet", "props": {"role": "issues"}}}
@@ -306,6 +309,15 @@ function finchViewRow(t, cx) {
         .child(label)));
 }
 
+// Finch: one task to several agents (fan-out), as in Finch's own + menu.
+function finchFanoutRow(t) {
+  return h_flex().id("pa-fanout").h(29).px(9).gap(10).items_center().rounded(6).cursor_pointer().text_color(t.foreground)
+    .hover(s => s.bg(t.hover))
+    .on_click(() => { closeOverlay(props().overlay); run("tab.new", { mod: "fanout", name: "Fan-out" }); })
+    .child(div().w(14).text_size(13).child("⑂"))
+    .child(div().flex_1().text_size(12.8).child(L("Several agents…", "Несколько агентов…")));
+}
+
 export default class'''
 SECOND = [
     ("prodsovet/main.js",
@@ -324,11 +336,13 @@ SECOND = [
     ("prodsovet/file-new-menu.js",
      '''        .child(this.projectRow("terminal", pxIcon("terminal"),''',
      '''        .child(finchViewRow(t))
+        .child(finchFanoutRow(t))
         .child(this.projectRow("terminal", pxIcon("terminal"),'''),
     ("prodsovet/file-new-menu.js",
      '''      .child(div().h(1).mx(4).my(5).bg(t.border))
       .child(this.row("space",''',
      '''      .child(finchViewRow(t))
+      .child(finchFanoutRow(t))
       .child(div().h(1).mx(4).my(5).bg(t.border))
       .child(this.row("space",'''),
 ]

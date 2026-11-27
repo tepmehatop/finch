@@ -228,16 +228,10 @@ impl Core {
         if !reports.is_empty() {
             self.report_status(st, id, &reports);
         }
-        // Finch: Qwen Code and GigaCode CLI say their state only in the title, or
-        // (versions without title glyphs) only on the screen.
+        // Finch: Qwen Code and GigaCode CLI say their state in the title (the
+        // screen is read by the foreground watcher).
         let from_title = title.as_ref().and_then(|title| st.reg.terminals.get(&id).and_then(|t| crate::title_status::infer(t, title)));
         if let Some(report) = from_title {
-            self.report_status(st, id, &[report]);
-        } else if st.reg.terminals.get(&id).is_some_and(|t| t.foreground.is_some())
-            && crate::title_status::due(id, crate::runtime::now_ms())
-            && let Some(rows) = st.screens.get(&id).map(|s| s.screen_rows())
-            && let Some(report) = st.reg.terminals.get(&id).and_then(|t| crate::title_status::infer_screen(t, &rows))
-        {
             self.report_status(st, id, &[report]);
         }
         if let Some(title) = title {

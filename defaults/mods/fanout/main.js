@@ -9,7 +9,7 @@
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextareaState, Textarea, Scrollbar } from "gpui-base";
 import { theme, spaces, panes, focused, knownAgents, exec, run, shared, setShared, appHome, home, readTextFile, notify, checking, tr } from "finch";
-import { launch, slug } from "./plan.js";
+import { launch, slug, MODEL_FLAG } from "./plan.js";
 
 const RUNS = "finch.fanout.runs";
 
@@ -29,7 +29,8 @@ async function worktreesDir() {
 export default class Fanout extends View {
   init(_props, cx) {
     this.agents = [];
-    this.picked = {}; // key → how many
+    this.slots = []; // [{ agent, model }]: one worktree and agent each
+    this.models = {}; // agent key → models it can run
     this.stats = {};
     this.busy = false;
     this.confirm = null;
@@ -37,6 +38,7 @@ export default class Fanout extends View {
     if (checking()) return;
     cx.spawn(async (cx) => {
       this.agents = (await knownAgents().catch(() => [])).filter((a) => a.installed);
+      for (const a of this.agents) this.models[a.key] = await this.modelsOf(a.key);
       cx.notify();
       await this.refresh();
       cx.notify();
@@ -46,6 +48,36 @@ export default class Fanout extends View {
 
   runs() {
     return shared(RUNS) ?? [];
+  }
+
+  // The models an agent can be started on: GigaCode's from its token file
+  // (as the + menu lists them), Claude Code's aliases.
+  async modelsOf(key) {
+    if (!MODEL_FLAG[key]) return [];
+    if (key === "claude") return ["opus", "sonnet", "haiku"];
+    if (!key.startsWith("gigacode")) return [];
+    try {
+      const cfg = JSON.parse((await readTextFile(`${home()}/.gigacode/gigacode_token.json`)) ?? "{}").config ?? {};
+      const names = [...(cfg.chat?.models ?? []), ...(cfg.agent?.models ?? [])].map((m) => m?.model ?? m?.name ?? m?.id).filter(Boolean);
+      return [...new Set(names)];
+    } catch {
+      return [];
+    }
+  }
+
+  // The next model for a copy: each copy of one agent starts on a different one.
+  nextModel(key, current) {
+    const list = this.models[key] ?? [];
+    if (!list.length) return null;
+    const i = list.indexOf(current);
+    return i < 0 ? list[0] : i + 1 < list.length ? list[i + 1] : null;
+  }
+
+  add(a, cx) {
+    const used = this.slots.filter((s) => s.agent.key === a.key).map((s) => s.model);
+    const model = (this.models[a.key] ?? []).find((m) => !used.includes(m)) ?? null;
+    this.slots.push({ agent: a, model });
+    cx.notify();
   }
 
   async refresh() {
@@ -62,7 +94,7 @@ export default class Fanout extends View {
 
   start(cx) {
     const task = this.task.value().trim();
-    const chosen = this.agents.flatMap((a) => Array.from({ length: this.picked[a.key] ?? 0 }, () => a));
+    const chosen = this.slots;
     if (!task || !chosen.length) return notify({ title: "Write a task and pick at least one agent", level: "info" });
     const { cwd } = location();
     if (!cwd) return notify({ title: "Open a space in a git repository first", level: "info" });
@@ -77,17 +109,18 @@ export default class Fanout extends View {
         const id = `${slug(task)}-${Date.now().toString(36).slice(-4)}`;
         const dir = `${await worktreesDir()}/${repo}`;
         const items = [];
-        for (const [n, agent] of chosen.entries()) {
+        for (const [n, { agent, model }] of chosen.entries()) {
           const branch = `fanout/${id}-${n + 1}-${agent.key}`;
           const path = `${dir}/${branch.replace(/\//g, "-")}`;
           const r = await exec("git", ["worktree", "add", "-b", branch, path, "HEAD"], { cwd: root });
           if (r.code !== 0) throw new Error(r.stderr.trim() || "git worktree add failed");
-          run("space.new", { folder: path, name: `${agent.name} ${n + 1}`, argv: launch(agent, task), focus: n === 0 });
-          items.push({ agent: agent.name, key: agent.key, branch, dir: path });
+          const label = model ? `${agent.name} · ${model}` : `${agent.name} ${n + 1}`;
+          run("space.new", { folder: path, name: label, argv: launch(agent, task, model), focus: n === 0 });
+          items.push({ agent: label, key: agent.key, model, branch, dir: path });
         }
         setShared(RUNS, [{ id, task, root, base, items, at: Date.now() }, ...this.runs()].slice(0, 20));
         this.task.set_value("");
-        this.picked = {};
+        this.slots = [];
         await this.refresh();
       } catch (e) {
         notify({ title: "Fan-out failed", body: String(e?.message ?? e), level: "error" });
@@ -134,23 +167,34 @@ export default class Fanout extends View {
 
   render(cx) {
     const t = theme();
-    const chips = this.agents.map((a) => {
-      const n = this.picked[a.key] ?? 0;
-      return h_flex().id(`fo-${a.key}`).gap(6).px(8).py(4).rounded(6).items_center().cursor_pointer()
-        .border_1().border_color(n ? t.accent : t.border)
-        .on_click((_e, cx) => { this.picked[a.key] = (n + 1) % 4; cx.notify(); })
-        .child(div().text_size(12.5).text_color(n ? t.foreground : t.muted).child(a.name))
-        .when(n > 0, (el) => el.child(div().text_size(11).font_semibold().text_color(t.accent).child(`×${n}`)));
-    });
+    // Add buttons: one per installed agent; each click adds one more copy.
+    const adds = this.agents.map((a) => h_flex().id(`fo-add-${a.key}`).gap(5).px(8).py(4).rounded(6).items_center().cursor_pointer()
+      .border_1().border_color(t.border).hover((s) => s.bg(t.hover))
+      .on_click((_e, cx) => this.add(a, cx))
+      .child(div().text_size(12).text_color(t.accent).child("+"))
+      .child(div().text_size(12.5).text_color(t.foreground).child(a.name)));
+    // The copies to start: agent, model (click to change), remove.
+    const slots = this.slots.map((s, i) => h_flex().gap(8).px(8).py(5).rounded(6).items_center().border_1().border_color(t.border).bg(t.surface)
+      .child(div().w(18).text_size(11.5).text_color(t.dim).child(`${i + 1}`))
+      .child(div().text_size(12.5).font_semibold().text_color(t.foreground).child(s.agent.name))
+      .when((this.models[s.agent.key] ?? []).length > 0, (el) => el.child(h_flex().id(`fo-model-${i}`).gap(4).px(7).py(1).rounded(5).cursor_pointer()
+        .border_1().border_color(t.border).text_size(11.5).text_color(t.muted).hover((x) => x.text_color(t.foreground))
+        .on_click((_e, cx) => { s.model = this.nextModel(s.agent.key, s.model); cx.notify(); })
+        .child(s.model ?? "default model").child(div().text_size(9).child("▾"))))
+      .child(div().flex_1())
+      .child(div().id(`fo-rm-slot-${i}`).px(6).text_size(13).text_color(t.dim).cursor_pointer().hover((x) => x.text_color(t.blocked))
+        .on_click((_e, cx) => { this.slots.splice(i, 1); cx.notify(); })
+        .child("×")));
     const runs = this.runs();
     return v_flex().id("fanout").size_full().bg(t.background)
       .child(h_flex().flex_none().h(40).px(12).items_center().border_b(1).border_color(t.border).bg(t.chrome)
         .child(div().text_size(13).font_semibold().text_color(t.foreground).child("Fan-out")))
       .child(v_flex().relative().flex_1().min_h(0)
         .child(v_flex().id("fo-scroll").size_full().overflow_y_scroll().p(12).gap(10)
-          .child(div().text_size(12.5).text_color(t.muted).child("One task to several agents, each on its own branch and worktree. Click an agent to add it (again for a second copy)."))
+          .child(div().text_size(12.5).text_color(t.muted).child("One task to several agents, each on its own branch and worktree, so they don't touch each other's files. Add agents below; one agent can run several times, each copy on its own model (click the model to change it)."))
           .child(div().rounded(6).border_1().border_color(t.input).px(8).py(6).child(Textarea.new(this.task).h(110)))
-          .child(h_flex().gap(6).flex_wrap().children(chips))
+          .child(h_flex().gap(6).flex_wrap().children(adds))
+          .when(slots.length > 0, (el) => el.child(v_flex().gap(5).children(slots)))
           .child(h_flex().child(div().flex_1()).child(this.button(t, "fo-start", this.busy ? "Starting…" : "Start", (_e, cx) => { if (!this.busy) this.start(cx); }, true)))
           .children(runs.map((r) => v_flex().gap(6).pt(10)
             .child(div().text_size(11.5).font_semibold().text_color(t.dim).child(`${new Date(r.at).toLocaleString()} · ${r.base}`))
