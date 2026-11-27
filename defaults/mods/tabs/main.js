@@ -130,6 +130,8 @@ export default class Tabs extends View {
       : 10;
     const panel = find(root, "panel"), body = find(root, "panel-body");
     const enabled = shared("workspace.panels") ?? ["files", "changes"];
+    // Finch: Settings > Mods turns the shipped extras on and off; on unless turned off.
+    const extra = (id) => (shared("finch.mods") ?? {})[id] !== false && Boolean(find(root, id));
     this.syncPanel(space, panel, body, enabled);
     const panelButton = (id, label, icon) => {
       const on = panel && !panel.hidden && body?.active === id;
@@ -148,8 +150,13 @@ export default class Tabs extends View {
         .on_size_change((_size, cx) => { if (active >= 0) { this.scroll.scroll_to_item(active); cx.notify(); } })
         .children(shown.map(item)))
       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
-      .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
-      .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
+      // Finch: the Better versions stand in for Files and Changes when they're on (Settings > Mods),
+      // and the extra panels show only while their mod is on.
+      .when(enabled.includes("files"), el => el.child(panelButton(extra("better-files") ? "better-files" : "files", "Files", "mods/files/file.svg")))
+      .when(enabled.includes("changes"), el => el.child(panelButton(extra("better-changes") ? "better-changes" : "changes", "Changes", "mods/changes/changes.svg")))
+      .when(extra("git-graph"), el => el.child(panelButton("git-graph", "Git graph", "mods/workspace-chrome/branch.svg")))
+      .when(extra("asks"), el => el.child(panelButton("asks", "Questions", "frame/welcome/messages.svg")))
+      .when(extra("skillsgate"), el => el.child(panelButton("skillsgate", "Skills", "frame/welcome/layers.svg")))
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
         .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
         .child(button("close-window", w.platform === "windows" ? svg("mods/tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));

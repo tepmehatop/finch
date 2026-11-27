@@ -396,7 +396,35 @@
     "Chat": "Чат",
     "Open the chat with the agent": "Открывать чат вместе с агентом",
     "Session ended": "Сессия завершена",
-    "The agent's session has ended. Close this chat, or start the agent again.": "Сессия агента завершена. Закройте чат или запустите агента снова."
+    "The agent's session has ended. Close this chat, or start the agent again.": "Сессия агента завершена. Закройте чат или запустите агента снова.",
+    "Mods": "Моды",
+    "Shipped mods": "Встроенные моды",
+    "Layouts": "Раскладки",
+    "Open": "Открыть",
+    "Switch": "Включить",
+    "In use": "Используется",
+    "Git graph": "Граф Git",
+    "Questions": "Вопросы",
+    "Skills": "Навыки",
+    "Better Changes": "Изменения+",
+    "Better Files": "Файлы+",
+    "Agent questions": "Вопросы агентов",
+    "Space folders": "Папки пространств",
+    "System notifications": "Системные уведомления",
+    "Search everything": "Поиск везде",
+    "Mod settings": "Настройки модов",
+    "Git panel in place of Changes: staged and unstaged files, commit and amend, history, side-by-side diff.": "Панель Git вместо «Изменений»: подготовленные и неподготовленные файлы, commit и amend, история, дифф рядом.",
+    "File browser in place of Files: filter any file, rendered Markdown, Git marks, hand a file to an agent.": "Файлы вместо стандартной панели: фильтр по любому файлу, отрисованный Markdown, отметки Git, передача файла агенту.",
+    "Commit graph with branches and tags; checkout and Git actions from it. A button in the tab bar.": "Граф коммитов с ветками и тегами; checkout и действия Git прямо из него. Кнопка на панели вкладок.",
+    "Every question your agents ask, in one panel; answer from there. A button in the tab bar.": "Все вопросы агентов в одной панели, отвечать можно прямо там. Кнопка на панели вкладок.",
+    "Agents' skills: what's installed for each tool, turn one on or off.": "Навыки агентов: что установлено для каждого инструмента, включить или выключить.",
+    "Folders in the spaces list: drag spaces into colored folders.": "Папки в списке пространств: перетаскивайте пространства в цветные папки.",
+    "A macOS or Linux notification when an agent needs you or finishes.": "Системное уведомление macOS или Linux, когда агент ждёт вас или закончил.",
+    "Every mod's own settings in one dialog.": "Собственные настройки всех модов в одном окне.",
+    "Projects, worktrees and agent sessions in one tree; files with an editor and Markdown preview; search; Git.": "Проекты, worktree и сессии агентов одним деревом; файлы с редактором и предпросмотром Markdown; поиск; Git.",
+    "The same, lighter: fewer panels.": "То же, но легче: меньше панелей.",
+    "All the Better mods in one window: spaces and agents on the left, files and changes on the right.": "Все моды Better в одном окне: пространства и агенты слева, файлы и изменения справа.",
+    "Mods and layouts work without the internet. PA-Advanced uses python3 for file operations; its search uses ripgrep when it's installed.": "Моды и раскладки работают без интернета. PA-Advanced использует python3 для операций с файлами; поиск использует ripgrep, если он установлен, иначе grep."
   },
   "patterns": [
     [
@@ -642,6 +670,10 @@
     [
       "Cannot read the session log: (.*)",
       "Не удалось прочитать лог сессии: $1"
+    ],
+    [
+      "One search for tabs, agents, spaces, files, commands and agent output\\. (.+)",
+      "Один поиск по вкладкам, агентам, пространствам, файлам, командам и выводу агентов. $1"
     ]
   ]
 }

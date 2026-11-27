@@ -59,7 +59,10 @@
     "ctrl-shift-z": "pane.zoom",
     "ctrl-shift-l": "layout.switch",
     "f2": "tab.rename",
-    "shift-f2": "space.rename"
+    "shift-f2": "space.rename",
+    "ctrl-shift-s": "mod.open:find",
+    "ctrl-alt-p": "mod.open:better-search",
+    "ctrl-alt-,": "mod.open:better-config"
   },
   "terminal": {
     "ctrl-backspace": "send:\u0017",
@@ -70,6 +73,34 @@
     "ctrl-shift-f": "terminal.search",
     "ctrl-v": "terminal.paste_image",
     "ctrl-insert": "terminal.copy",
-    "shift-insert": "terminal.paste"
+    "shift-insert": "terminal.paste",
+    "ctrl-shift-y": "mod.open:session_fork"
+  },
+  "mod:my-files": {
+    "f2": "my-files.rename",
+    "ctrl-n": "my-files.create-file",
+    "ctrl-shift-n": "my-files.create-folder",
+    "ctrl-shift-g": "my-files.goto"
+  },
+  "mod:file-tab": {
+    "ctrl-s": "file-tab.save"
+  },
+  "layout:PA-Light": {
+    "ctrl-shift-t": "prodsovet.new-terminal",
+    "ctrl-t": "prodsovet.new-terminal",
+    "ctrl-shift-o": "prodsovet.split-right",
+    "ctrl-shift-e": "prodsovet.split-down"
+  },
+  "layout:PA-Advanced": {
+    "ctrl-shift-t": "prodsovet.new-terminal",
+    "ctrl-t": "prodsovet.new-terminal",
+    "ctrl-shift-o": "prodsovet.split-right",
+    "ctrl-shift-e": "prodsovet.split-down",
+    "ctrl-shift-k": "prodsovet.picker",
+    "ctrl-shift-n": "prodsovet.open-project",
+    "ctrl-tab": "prodsovet.next-tab",
+    "ctrl-shift-tab": "prodsovet.prev-tab",
+    "ctrl-pagedown": "prodsovet.next-tab",
+    "ctrl-pageup": "prodsovet.prev-tab"
   }
 }

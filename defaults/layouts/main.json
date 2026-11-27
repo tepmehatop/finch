@@ -43,15 +43,29 @@
           "type": "column",
           "children": [
             {
-              "id": "spaces",
-              "type": "block",
+              "id": "spaces-stack",
+              "type": "stack",
+              "active": "spaces",
               "size": {
                 "weight": 1
               },
-              "min": 90,
-              "content": {
-                "mod": "spaces"
-              }
+              "children": [
+                {
+                  "id": "spaces",
+                  "type": "block",
+                  "min": 90,
+                  "content": {
+                    "mod": "spaces"
+                  }
+                },
+                {
+                  "id": "space-folders",
+                  "type": "block",
+                  "content": {
+                    "mod": "space-folders"
+                  }
+                }
+              ]
             },
             {
               "id": "agents",
@@ -160,6 +174,41 @@
                       "content": {
                         "mod": "changes"
                       }
+                    },
+                    {
+                      "id": "better-files",
+                      "type": "block",
+                      "content": {
+                        "mod": "better-files"
+                      }
+                    },
+                    {
+                      "id": "better-changes",
+                      "type": "block",
+                      "content": {
+                        "mod": "better-changes"
+                      }
+                    },
+                    {
+                      "id": "git-graph",
+                      "type": "block",
+                      "content": {
+                        "mod": "git-graph"
+                      }
+                    },
+                    {
+                      "id": "asks",
+                      "type": "block",
+                      "content": {
+                        "mod": "asks"
+                      }
+                    },
+                    {
+                      "id": "skillsgate",
+                      "type": "block",
+                      "content": {
+                        "mod": "skillsgate"
+                      }
                     }
                   ]
                 }
@@ -178,6 +227,16 @@
           }
         }
       ]
+    }
+  ],
+  "floating": [
+    {
+      "id": "better-alerts",
+      "content": {
+        "mod": "better-alerts"
+      },
+      "edge": "bottom",
+      "align": "end"
     }
   ]
 }

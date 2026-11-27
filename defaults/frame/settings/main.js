@@ -2,7 +2,7 @@
 
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, InputState, Input, Popup } from "gpui-base";
-import { hc, run, theme, themes, fonts, updates, telemetry, settings, layouts, shared, appHome, readTextFile, writeTextFile, playSound, props, closeOverlay, notify, window, finch } from "finch";
+import { hc, run, theme, themes, fonts, updates, telemetry, settings, layouts, shared, appHome, readTextFile, writeTextFile, playSound, props, closeOverlay, notify, window, finch, setShared } from "finch";
 
 const I = (name) => `frame/settings/${name}.svg`;
 
@@ -15,14 +15,34 @@ const SECTIONS = [
   ...(CLOSED ? [] : [{ id: "machines", title: "Machines", icon: "server" }]),
   { id: "alerts", title: "Alerts", icon: "bell" },
   // Finch: no self-updates and no usage data, so About replaces Updates and Privacy.
+  { id: "mods", title: "Mods", icon: "puzzle" },
   { id: "about", title: "About", icon: "info" },
+];
+
+// Finch: the community mods and layouts that ship with the app (scripts/finch-vendor-mods.py).
+// Each is on unless turned off here; shared("finch.mods") keeps the choice.
+const EXTRAS = [
+  { id: "better-changes", title: "Better Changes", about: "Git panel in place of Changes: staged and unstaged files, commit and amend, history, side-by-side diff.", on: true },
+  { id: "better-files", title: "Better Files", about: "File browser in place of Files: filter any file, rendered Markdown, Git marks, hand a file to an agent.", on: true },
+  { id: "git-graph", title: "Git graph", about: "Commit graph with branches and tags; checkout and Git actions from it. A button in the tab bar.", on: true },
+  { id: "asks", title: "Agent questions", about: "Every question your agents ask, in one panel; answer from there. A button in the tab bar.", on: true },
+  { id: "skillsgate", title: "Skills", about: "Agents' skills: what's installed for each tool, turn one on or off.", on: true },
+  { id: "space-folders", title: "Space folders", about: "Folders in the spaces list: drag spaces into colored folders.", on: false, select: ["spaces-stack", "space-folders", "spaces"] },
+  { id: "better-alerts", title: "System notifications", about: "A macOS or Linux notification when an agent needs you or finishes.", on: true },
+  { id: "better-search", title: "Search everything", about: "One search for tabs, agents, spaces, files, commands and agent output.", on: true, open: "better-search", key: "⌥⌘P" },
+  { id: "better-config", title: "Mod settings", about: "Every mod's own settings in one dialog.", on: true, open: "better-config", key: "⌥⌘," },
+];
+const EXTRA_LAYOUTS = [
+  { id: "PA-Advanced", title: "PA-Advanced", about: "Projects, worktrees and agent sessions in one tree; files with an editor and Markdown preview; search; Git." },
+  { id: "PA-Light", title: "PA-Light", about: "The same, lighter: fewer panels." },
+  { id: "estro", title: "Estro", about: "All the Better mods in one window: spaces and agents on the left, files and changes on the right." },
 ];
 const LANGUAGES = [
   ["en", "English"],
   ["ru", "Русский"],
 ];
 
-const LOOKS = { main: "Finch", terminals: "Terminals", win98: "Finch 98" };
+const LOOKS = { main: "Finch", terminals: "Terminals", win98: "Finch 98", "PA-Advanced": "PA-Advanced", "PA-Light": "PA-Light", estro: "Estro" };
 const APPEARANCES = [
   [null, "System"],
   ["light", "Light"],
@@ -794,6 +814,35 @@ export default class Settings extends View {
       .child(div().pt(12).text_size(12.5).line_height("18px").text_color(t.dim).child("Want your own sounds? Ask your agent to set sounds.done and sounds.blocked in settings.json to an MP3."));
   }
 
+  // Mods -----------------------------------------------------------------
+
+  mods(t) {
+    const state = shared("finch.mods") ?? {};
+    const isOn = (x) => (x.id in state ? state[x.id] !== false : x.on);
+    const flip = (x) => (_e, cx) => {
+      const next = !isOn(x);
+      setShared("finch.mods", { ...(shared("finch.mods") ?? {}), [x.id]: next });
+      if (x.select) run("layout.select", { stack: x.select[0], child: next ? x.select[1] : x.select[2] });
+      cx.notify();
+    };
+    const current = shared("layout");
+    return v_flex()
+      .w_full()
+      .child(this.heading(t, "Shipped mods"))
+      .children(EXTRAS.map((x) =>
+        this.row(t, x.title, x.key ? `${x.about} ${x.key}` : x.about,
+          h_flex().gap(8).items_center().flex_none()
+            .when(Boolean(x.open) && isOn(x), (el) => el.child(this.button(t, `st-open-${x.id}`, "Open", () => { closeOverlay(props()?.overlay); run("mod.open", { name: x.open }); })))
+            .child(this.toggle(t, `st-mod-${x.id}`, isOn(x), flip(x))))))
+      .child(div().h(18))
+      .child(this.heading(t, "Layouts"))
+      .children(EXTRA_LAYOUTS.map((l) =>
+        this.row(t, l.title, l.about, current === l.id
+          ? div().px(12).py(5).text_size(13).text_color(t.dim).child("In use")
+          : this.button(t, `st-layout-${l.id}`, "Switch", () => run("layout.switch", { name: l.id })))))
+      .child(div().pt(12).text_size(12.5).line_height("18px").text_color(t.dim).child("Mods and layouts work without the internet. PA-Advanced uses python3 for file operations; its search uses ripgrep when it's installed."));
+  }
+
   // About ----------------------------------------------------------------
 
   // Finch: what this build is. Finch never updates itself: a new version is
@@ -1034,7 +1083,9 @@ export default class Settings extends View {
                         ? this.machines(t)
                       : this.section === "alerts"
                         ? this.alerts(t)
-                        : this.about(t),
+                        : this.section === "mods"
+                          ? this.mods(t)
+                          : this.about(t),
                   ),
               ),
           )

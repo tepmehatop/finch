@@ -97,8 +97,13 @@ fn preset(name: &str) -> Option<&'static Palette> {
 const THEMES: &[(&str, &str)] = &[
     ("atom-one-dark", include_str!("../defaults/themes/atom-one-dark.json")),
     ("win98", include_str!("../defaults/themes/win98.json")),
+    // Finch: PA-Advanced's and PA-Light's themes.
+    ("PA-Advanced-Day", include_str!("../defaults/themes/PA-Advanced-Day.json")),
+    ("PA-Advanced-Night", include_str!("../defaults/themes/PA-Advanced-Night.json")),
+    ("PA-Light-Day", include_str!("../defaults/themes/PA-Light-Day.json")),
+    ("PA-Light-Night", include_str!("../defaults/themes/PA-Light-Night.json")),
 ];
-pub const SHIPPED_THEMES: &[&str] = &["atom-one-dark", "win98"];
+pub const SHIPPED_THEMES: &[&str] = &["atom-one-dark", "win98", "PA-Advanced-Day", "PA-Advanced-Night", "PA-Light-Day", "PA-Light-Night"];
 
 /// `themes/<name>.json`: a palette, plus `colors` overrides like settings.json's.
 #[derive(Deserialize)]

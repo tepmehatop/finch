@@ -150,10 +150,18 @@ const LAYOUTS: &[(&str, &str)] = &[
     ("main", include_str!("../defaults/layouts/main.json")),
     ("terminals", include_str!("../defaults/layouts/terminals.json")),
     ("win98", include_str!("../defaults/layouts/win98.json")),
+    // Finch: community layouts shipped with their mods (scripts/finch-vendor-mods.py).
+    ("PA-Advanced", include_str!("../defaults/layouts/PA-Advanced.json")),
+    ("PA-Light", include_str!("../defaults/layouts/PA-Light.json")),
+    ("estro", include_str!("../defaults/layouts/estro.json")),
 ];
 
 /// Pictures shipped layouts name as their `preview`, written beside them.
-const LAYOUT_PREVIEWS: &[(&str, &str)] = &[("win98.svg", include_str!("../defaults/layouts/win98.svg"))];
+const LAYOUT_PREVIEWS: &[(&str, &str)] = &[
+    ("win98.svg", include_str!("../defaults/layouts/win98.svg")),
+    ("pa-advanced.svg", include_str!("../defaults/layouts/pa-advanced.svg")),
+    ("pa-light.svg", include_str!("../defaults/layouts/pa-light.svg")),
+];
 
 pub fn shipped_layouts() -> Vec<&'static str> {
     LAYOUTS.iter().map(|(n, _)| *n).collect()
@@ -3724,6 +3732,10 @@ impl AppWindow {
                 // Finch: no other machines in the closed-network edition.
                 if crate::edition::CLOSED && name == "machine-add" {
                     return self.fail("this edition works on this computer only");
+                }
+                // Finch: a shipped mod turned off in Settings > Mods doesn't open.
+                if crate::mods::shared("finch.mods").and_then(|m| m.get(name).and_then(Value::as_bool)) == Some(false) {
+                    return self.fail(format!("{name} is turned off in Settings > Mods"));
                 }
                 let Some(f) = self.view_mod(name) else { return self.fail(format!("no mod folder {name:?}")) };
                 let mut spec = mod_overlay(&f.dir);

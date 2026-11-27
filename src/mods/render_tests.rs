@@ -106,6 +106,11 @@ impl Staged {
         for folder in ["mods", "frame"] {
             for entry in std::fs::read_dir(self.0.join(folder)).unwrap() {
                 let entry = entry.unwrap();
+                // Finch: community mods follow their own authors' tests; Finch checks them
+                // with `finch check` and in the app (scripts/finch-vendor-mods.py).
+                if folder == "mods" && COMMUNITY_MODS.contains(&entry.file_name().to_str().unwrap()) {
+                    continue;
+                }
                 assert!(entry.path().join("main.js").is_file(), "missing main.js: {:?}", entry.path());
                 entries.push(format!("{folder}/{}", entry.file_name().to_str().unwrap()));
             }
@@ -180,6 +185,13 @@ fn fixture(populated: bool, props: Value, update: Value) -> BTreeMap<String, Val
     }
     values
 }
+
+/// Finch: mods shipped from other authors (scripts/finch-vendor-mods.py).
+const COMMUNITY_MODS: &[&str] = &[
+    "better-changes", "better-files", "better-icons", "better-search", "better-config", "better-alerts",
+    "better-sidebar", "better-tabs", "prodsovet", "my-files", "file-tab", "find", "session_fork",
+    "asks", "space-folders", "git-graph", "skillsgate",
+];
 
 fn module(values: BTreeMap<String, Value>, calls: Rc<RefCell<Calls>>) -> HostModule {
     let mut module = HostModule::new("finch");
@@ -1629,6 +1641,7 @@ fn shipped_layouts_and_keys() {
         .entries()
         .into_iter()
         .filter_map(|p| p.strip_prefix("mods/").map(str::to_owned))
+        .chain(COMMUNITY_MODS.iter().map(|m| (*m).to_owned()))
         .collect();
     let folder = Path::new(env!("CARGO_MANIFEST_DIR")).join("defaults/layouts");
     let mut layouts = BTreeSet::new();
@@ -1662,6 +1675,8 @@ fn shipped_layouts_and_keys() {
     }
     assert_eq!(layouts, crate::window::shipped_layouts().into_iter().map(str::to_owned).collect());
     let mod_commands = ["ribbon.next"];
+    // Finch: community mods' own commands (prodsovet.next-tab, my-files.rename, ...).
+    let community = |name: &str| COMMUNITY_MODS.contains(&name.split('.').next().unwrap_or_default());
     for text in [
         include_str!("../../defaults/keys.json"),
         include_str!("../../defaults/keys.macos.json"),
@@ -1686,7 +1701,8 @@ fn shipped_layouts_and_keys() {
                     action == "terminal"
                         || action.starts_with("send:")
                         || crate::commands::COMMANDS.iter().any(|c| c.name == name)
-                        || (mod_commands.contains(&name) && mods.contains(name.split('.').next().unwrap())),
+                        || (mod_commands.contains(&name) && mods.contains(name.split('.').next().unwrap()))
+                        || community(name),
                     "unknown shipped key action {action}"
                 );
             }
