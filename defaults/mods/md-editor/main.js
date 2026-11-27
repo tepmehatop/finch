@@ -176,7 +176,7 @@ export default class MdEditor extends View {
       return v_flex().size_full().bg(t.background).child(header)
         .child(div().p(16).text_size(13).text_color(t.blocked).child(`Cannot open ${name}: ${this.error}`));
     }
-    const editor = div().flex_1().min_w(0).h_full().child(Editor.new(this.state).size_full().text_size(settings().font_size ?? 14));
+    const editor = div().flex_1().min_w(0).h_full().child(Editor.new(this.state).size_full().text_size(13));
     const preview = v_flex().relative().flex_1().min_w(0).h_full().border_l(1).border_color(t.border)
       .child(div().id("md-preview-scroll").size_full().overflow_y_scroll().p(16).text_size(14).text_color(t.foreground)
         .child(TextView.markdown("md-preview-body", this.text).selectable(true)))

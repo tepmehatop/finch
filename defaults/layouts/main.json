@@ -209,6 +209,13 @@
                       "content": {
                         "mod": "skillsgate"
                       }
+                    },
+                    {
+                      "id": "prompts",
+                      "type": "block",
+                      "content": {
+                        "mod": "prompts"
+                      }
                     }
                   ]
                 }

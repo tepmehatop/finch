@@ -1,0 +1,15 @@
+{
+  "place": "none",
+  "title": "Prompts",
+  "palette": [
+    {
+      "title": "Prompts",
+      "command": "tab.new",
+      "args": {
+        "mod": "prompts",
+        "name": "Prompts"
+      },
+      "words": "prompts library instructions \u043f\u0440\u043e\u043c\u043f\u0442\u044b"
+    }
+  ]
+}

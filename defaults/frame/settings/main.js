@@ -26,6 +26,7 @@ const EXTRAS = [
   { id: "better-files", title: "Better Files", about: "File browser in place of Files: filter any file, rendered Markdown, Git marks, hand a file to an agent.", on: true },
   { id: "git-graph", title: "Git graph", about: "Commit graph with branches and tags; checkout and Git actions from it. A button in the tab bar.", on: true },
   { id: "asks", title: "Agent questions", about: "Every question your agents ask, in one panel; answer from there. A button in the tab bar.", on: true },
+  { id: "prompts", title: "Prompts", about: "Saved prompts to send to an agent or put in the chat, and instructions written into every agent's global instructions file.", on: true },
   { id: "skillsgate", title: "Skills", about: "Agents' skills: what's installed for each tool, turn one on or off.", on: true },
   { id: "space-folders", title: "Space folders", about: "Folders in the spaces list: drag spaces into colored folders.", on: false, select: ["spaces-stack", "space-folders", "spaces"] },
   { id: "better-alerts", title: "System notifications", about: "A macOS or Linux notification when an agent needs you or finishes.", on: true },

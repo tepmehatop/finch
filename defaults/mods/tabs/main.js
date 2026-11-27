@@ -157,6 +157,7 @@ export default class Tabs extends View {
       .when(extra("git-graph"), el => el.child(panelButton("git-graph", "Git graph", "mods/workspace-chrome/branch.svg")))
       .when(extra("asks"), el => el.child(panelButton("asks", "Questions", "frame/welcome/messages.svg")))
       .when(extra("skillsgate"), el => el.child(panelButton("skillsgate", "Skills", "frame/welcome/layers.svg")))
+      .when(extra("prompts"), el => el.child(panelButton("prompts", "Prompts", "frame/palette/command.svg")))
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
         .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
         .child(button("close-window", w.platform === "windows" ? svg("mods/tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));

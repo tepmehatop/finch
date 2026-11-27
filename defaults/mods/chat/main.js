@@ -12,7 +12,7 @@
 
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, ScrollHandle, Scrollbar, TextView, TextareaState, Textarea } from "gpui-base";
-import { theme, props, terminals, agents, hc, run, fileTail, fileBefore, recentFiles, checking, settings, window, tr } from "finch";
+import { theme, props, terminals, agents, hc, run, fileTail, fileBefore, recentFiles, checking, settings, window, tr, shared } from "finch";
 import { decodeLines, fold, summary, clip } from "./decode.js";
 
 const KEEP = 300; // blocks held while following the end
@@ -320,6 +320,16 @@ export default class Chat extends View {
 
   render(cx) {
     const t = theme();
+    // Finch: a prompt sent here from the Prompts panel lands in the composer.
+    const insert = shared("finch.chat.insert");
+    if (insert?.at && insert.at !== this.inserted) {
+      const first = this.inserted === undefined;
+      this.inserted = insert.at;
+      if (!first) {
+        const now = this.input.value();
+        this.input.set_value(now ? `${now}\n${insert.text}` : insert.text);
+      }
+    }
     const term = this.term();
     const agent = agents().find((a) => a.address === this.address);
     const status = agent?.status ?? null;

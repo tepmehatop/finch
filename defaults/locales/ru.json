@@ -445,7 +445,26 @@
     "Link": "Ссылка",
     "Code block": "Блок кода",
     "Table": "Таблица",
-    "Divider": "Разделитель"
+    "Divider": "Разделитель",
+    "Prompts": "Промпты",
+    "Instructions": "Инструкции",
+    "Search prompts": "Поиск промптов",
+    "New": "Новый",
+    "Title": "Название",
+    "Prompt text": "Текст промпта",
+    "Rules every agent follows on this computer: language, code style, what never to do…": "Правила для всех агентов на этом компьютере: язык, стиль кода, чего никогда не делать…",
+    "No prompts match": "Ничего не найдено",
+    "No prompts yet. New saves one.": "Промптов пока нет. «Новый» сохранит первый.",
+    "Send to agent": "Отправить агенту",
+    "To chat": "В чат",
+    "Delete": "Удалить",
+    "No terminal is focused": "Не выбран терминал",
+    "Click an agent's terminal, then send again.": "Щёлкните по терминалу агента и отправьте снова.",
+    "Finch writes this text into each agent's global instructions file, between its own markers. The rest of each file stays as it is; an empty text removes Finch's part.": "Finch записывает этот текст в глобальный файл инструкций каждого агента между своими метками. Остальное содержимое файлов не меняется; пустой текст удаляет блок Finch.",
+    "Apply to agents": "Применить к агентам",
+    "up to date": "актуально",
+    "written": "записано",
+    "Saved prompts to send to an agent or put in the chat, and instructions written into every agent's global instructions file.": "Сохранённые промпты для отправки агенту или в чат и инструкции, которые записываются в глобальный файл инструкций каждого агента."
   },
   "patterns": [
     [
@@ -699,6 +718,10 @@
     [
       "Cannot open (.+): (.+)",
       "Не удалось открыть $1: $2"
+    ],
+    [
+      "not written: (.+)",
+      "не записано: $1"
     ]
   ]
 }
